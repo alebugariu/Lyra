@@ -188,6 +188,10 @@ class ExpressionVisitor(metaclass=ABCMeta):
         """Visit of a values call expression."""
 
     @abstractmethod
+    def visit_Items(self, expr: 'Items'):
+        """Visit of an items call expression."""
+
+    @abstractmethod
     def visit_UnaryArithmeticOperation(self, expr: 'UnaryArithmeticOperation'):
         """Visit of a unary arithmetic operation."""
 
@@ -277,6 +281,10 @@ class NegationFreeExpression(ExpressionVisitor):
 
     @copy_docstring(ExpressionVisitor.visit_Values)
     def visit_Values(self, expr: 'Values', invert=False):
+        return expr  # nothing to be done
+
+    @copy_docstring(ExpressionVisitor.visit_Items)
+    def visit_Items(self, expr: 'Items', invert=False):
         return expr  # nothing to be done
 
     @copy_docstring(ExpressionVisitor.visit_UnaryArithmeticOperation)
@@ -378,7 +386,11 @@ class NegationFreeNormalExpression(ExpressionVisitor):
         return expr  # nothing to be done
 
     @copy_docstring(ExpressionVisitor.visit_Values)
-    def visit_Values(self, expr: 'Keys', invert=False):
+    def visit_Values(self, expr: 'Values', invert=False):
+        return expr  # nothing to be done
+
+    @copy_docstring(ExpressionVisitor.visit_Items)
+    def visit_Items(self, expr: 'Items', invert=False):
         return expr  # nothing to be done
 
     @copy_docstring(ExpressionVisitor.visit_UnaryArithmeticOperation)
@@ -537,7 +549,11 @@ class Lyra2APRON(ExpressionVisitor):
         raise ValueError(f"Conversion of {expr} to APRON is unsupported!")
 
     @copy_docstring(ExpressionVisitor.visit_Values)
-    def visit_Values(self, expr: 'Keys', environment=None, usub=False):
+    def visit_Values(self, expr: 'Values', environment=None, usub=False):
+        raise ValueError(f"Conversion of {expr} to APRON is unsupported!")
+
+    @copy_docstring(ExpressionVisitor.visit_Items)
+    def visit_Items(self, expr: 'Items', environment=None, usub=False):
         raise ValueError(f"Conversion of {expr} to APRON is unsupported!")
 
     @copy_docstring(ExpressionVisitor.visit_UnaryArithmeticOperation)

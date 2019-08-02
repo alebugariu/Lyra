@@ -11,4 +11,8 @@ for line in file:
     print(data[0])
     print(result)
 
+for letter_grade, numeric_grade in grade2gpa.items():
+    print(letter_grade)
+    print(numeric_grade)
+
 

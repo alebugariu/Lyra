@@ -17,7 +17,7 @@ from lyra.abstract_domains.store import Store
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, Slicing, \
     BinaryBooleanOperation, ExpressionVisitor, Literal, LengthIdentifier, ListDisplay, \
     AttributeReference, Input, Range, UnaryArithmeticOperation, BinaryArithmeticOperation, \
-    UnaryBooleanOperation, TupleDisplay, SetDisplay, DictDisplay, BinarySequenceOperation, Keys, Values
+    UnaryBooleanOperation, TupleDisplay, SetDisplay, DictDisplay, BinarySequenceOperation, Keys, Values, Items
 from lyra.core.types import LyraType, BooleanLyraType, SequenceLyraType
 from lyra.core.utils import copy_docstring
 
@@ -260,6 +260,14 @@ class Basis(Store, State, metaclass=ABCMeta):
             evaluation[expr] = evaluated[expr.target_dict]
             return evaluation
 
+        @copy_docstring(ExpressionVisitor.visit_Items)
+        def visit_Items(self, expr: Items, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = self.visit(expr.target_dict, state, evaluation)
+            evaluation[expr] = evaluated[expr.target_dict]
+            return evaluation
+
         @copy_docstring(ExpressionVisitor.visit_UnaryArithmeticOperation)
         def visit_UnaryArithmeticOperation(self, expr, state=None, evaluation=None):
             if expr in evaluation:
@@ -463,6 +471,10 @@ class Basis(Store, State, metaclass=ABCMeta):
 
         @copy_docstring(ExpressionVisitor.visit_Values)
         def visit_Values(self, expr: Values, evaluation=None, value=None, state=None):
+            return state  # nothing to be done
+
+        @copy_docstring(ExpressionVisitor.visit_Items)
+        def visit_Items(self, expr: Items, evaluation=None, value=None, state=None):
             return state  # nothing to be done
 
         @copy_docstring(ExpressionVisitor.visit_UnaryArithmeticOperation)
