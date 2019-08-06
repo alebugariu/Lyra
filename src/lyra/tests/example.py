@@ -15,4 +15,18 @@ for letter_grade, numeric_grade in grade2gpa.items():
     print(letter_grade)
     print(numeric_grade)
 
+if 'A' not in grade2gpa.keys():
+    raise ValueError
+if '4.0' not in grade2gpa.values():
+    raise ValueError
+
+students2grades: Dict[int, List[float]] = dict()
+number_of_students: int = input()
+for student in range(number_of_students):
+    number_of_grades: int = input()
+    grades: List[float] = list()
+    for grade_counter in range(number_of_grades):
+        grade: float = input()
+        grades.add(grade)
+    students2grades[student] = grades
 
