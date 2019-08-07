@@ -9,7 +9,7 @@ from lyra.abstract_domains.lattice import BottomMixin
 from lyra.abstract_domains.numerical.interval_domain import Input
 
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, SetDisplay, ListDisplay, \
-    BinaryComparisonOperation, Keys, DictDisplay
+    BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation
 from lyra.core.types import LyraType
 from lyra.core.utils import copy_docstring
 
@@ -102,6 +102,36 @@ class ContainerState(Basis, InputMixin):
         InputMixin.__init__(self, precursory)
 
     def _assume(self, condition: Expression, bwd: bool = False) -> 'ContainerState':
+        if isinstance(condition, BinaryComparisonOperation):
+            left = condition.left
+            right = condition.right
+            operator = condition.operator
+            if isinstance(right, Values):
+                target = right.target_dict
+                current_state = self.store[target]
+                if operator is BinaryComparisonOperation.Operator.NotIn:
+                    self.store[target] = ContainerLattice(current_state.keys, current_state.values.discard(left))
+                    return self
+                if operator is BinaryComparisonOperation.Operator.In:
+                    self.store[target] = ContainerLattice(current_state.keys, current_state.values.union({left}))
+                    return self
+            if isinstance(right, Keys):
+                target = right.target_dict
+                current_state = self.store[target]
+                if operator is BinaryComparisonOperation.Operator.NotIn:
+                    self.store[target] = ContainerLattice(current_state.keys.discard(left), current_state.values)
+                    return self
+                if operator is BinaryComparisonOperation.Operator.In:
+                    self.store[target] = ContainerLattice(current_state.keys.union({left}), current_state.values)
+                    return self
+        elif isinstance(condition, UnaryBooleanOperation):  # not
+            expression = condition.expression
+            if isinstance(expression, BinaryComparisonOperation):
+                reverse_operator = expression.operator.reverse_operator()
+                left = expression.left
+                right = expression.right
+                rewritten_expression = BinaryComparisonOperation(expression.typ, left, reverse_operator, right)
+                return self._assume(rewritten_expression, bwd)
         return self
 
     def _substitute(self, left: Expression, right: Expression) -> 'ContainerState':

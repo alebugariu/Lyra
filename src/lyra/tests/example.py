@@ -20,6 +20,11 @@ if 'A' not in grade2gpa.keys():
 if '4.0' not in grade2gpa.values():
     raise ValueError
 
+if 'G' in grade2gpa.keys():
+    raise ValueError
+if '-1.0' in grade2gpa.values():
+    raise ValueError
+
 students2grades: Dict[int, List[float]] = dict()
 number_of_students: int = input()
 for student in range(number_of_students):
