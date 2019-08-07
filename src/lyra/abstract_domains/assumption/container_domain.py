@@ -10,7 +10,7 @@ from lyra.abstract_domains.numerical.interval_domain import Input
 
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, SetDisplay, ListDisplay, \
     BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation
-from lyra.core.types import LyraType
+from lyra.core.types import LyraType, ListLyraType
 from lyra.core.utils import copy_docstring
 
 
@@ -42,6 +42,7 @@ class ContainerLattice(BottomMixin):
     @property
     def keys(self):
         """Current set of keys that must be in the container.
+        For lists, this represents the current set of indices.
 
         :return: the current set of keys
         """
@@ -106,8 +107,12 @@ class ContainerState(Basis, InputMixin):
             left = condition.left
             right = condition.right
             operator = condition.operator
-            if isinstance(right, Values):
-                target = right.target_dict
+            if isinstance(right, Values) or (isinstance(right, VariableIdentifier) and
+                                             isinstance(right.typ, ListLyraType)):
+                if isinstance(right, VariableIdentifier):  # the target is the list itself
+                    target = right
+                else:  # the target is the dictionary
+                    target = right.target_dict
                 current_state = self.store[target]
                 if operator is BinaryComparisonOperation.Operator.NotIn:
                     self.store[target] = ContainerLattice(current_state.keys, current_state.values.discard(left))

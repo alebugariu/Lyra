@@ -29,9 +29,11 @@ students2grades: Dict[int, List[float]] = dict()
 number_of_students: int = input()
 for student in range(number_of_students):
     number_of_grades: int = input()
-    grades: List[float] = list()
+    grades_for_student: List[float] = list()
     for grade_counter in range(number_of_grades):
         grade: float = input()
-        grades.add(grade)
-    students2grades[student] = grades
+        grades_for_student.add(grade)
+    if '-1.0' in grades_for_student:
+        raise ValueError
+    students2grades[student] = grades_for_student
 
