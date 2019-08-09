@@ -14,7 +14,6 @@ from lyra.core.types import LyraType, ListLyraType
 from lyra.core.utils import copy_docstring
 
 
-
 class ContainerLattice(BottomMixin):
     """Container lattice.
 
