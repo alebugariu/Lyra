@@ -1,8 +1,6 @@
 
-from typing import Sequence
-FAIL: None = 'IMPOSSIBLE'
 
-def flip(c: Sequence) -> str:
+def flip(c: str) -> str:
     if (c == '+'):
         return '-'
     if (c == '-'):
@@ -23,11 +21,11 @@ def solve(cakes: str, n: int) -> int:
     idx: int = 0
     while ((('-' in cakes) or (cakes.count('-') == 1)) and (idx < 10)):
         idx += 1
-        first: None = cakes.find('-')
+        first: int = cakes.find('-')
         cakes: str = n_flip(cakes, n, first)
         flips += 1
     if (cakes.count('-') == 1):
-        return FAIL
+        return (- 1)
     if (not ('-' in cakes)):
         return flips
     raise IOError(cakes)
@@ -38,7 +36,11 @@ with open('A-small-attempt0.in') as f:
         cakes: str = line.split(' ')[0]
         flipper: int = int(line.split(' ')[1].strip())
         try:
-            result: complex = solve(cakes, flipper)
+            number: int = solve(cakes, flipper)
+            if (number == (- 1)):
+                result: str = 'IMPOSSIBLE'
+            else:
+                result: int = number
         except Exception:
-            result: complex = FAIL
+            result: object = 'IMPOSSIBLE'
         print('Case #{}: {}'.format((i + 1), result))

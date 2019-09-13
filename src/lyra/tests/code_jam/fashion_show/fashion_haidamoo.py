@@ -1,17 +1,17 @@
 
-from typing import Dict, Tuple, IO
+from typing import Dict, IO, List, Tuple
 
-def f(N: int, Ms: Dict[(Tuple[(complex, complex)], str)]) -> Tuple[(complex, Dict[(Tuple[(complex, complex)], str)])]:
-    star: Tuple[(complex, complex)] = (1, 1)
-    changed: Dict[(Tuple[(complex, complex)], str)] = {
+def f(N: int, Ms: Dict[(Tuple[(int, int)], str)]) -> Tuple[(int, Dict[(Tuple[(int, int)], str)])]:
+    star: Tuple[(int, int)] = (1, 1)
+    changed: Dict[(Tuple[(int, int)], str)] = {
         
     }
     for i in range(1, (N + 1)):
         if ((1, i) in Ms):
             if (Ms[(1, i)] == 'x'):
-                star: Tuple[(complex, complex)] = (1, i)
+                star: Tuple[(int, int)] = (1, i)
             elif (Ms[(1, i)] == 'o'):
-                star: Tuple[(complex, complex)] = (1, i)
+                star: Tuple[(int, int)] = (1, i)
     if ((star not in Ms) or (Ms[star] != 'o')):
         changed[star]: str = 'o'
     for i in range(1, (N + 1)):
@@ -30,17 +30,17 @@ def f(N: int, Ms: Dict[(Tuple[(complex, complex)], str)]) -> Tuple[(complex, Dic
                 changed[(i, ((N + 1) - i))]: str = 'x'
     else:
         for i in range(1, (N + 1)):
-            p: Tuple[(complex, complex)] = (i, (((((star[1] - 1) + i) - 1) % N) + 1))
+            p: Tuple[(int, int)] = (i, (((((star[1] - 1) + i) - 1) % N) + 1))
             if ((star[1] == 2) and ((N % 2) == 0)):
-                p: Tuple[(complex, complex)] = (p[0], (((star[1] - i) % N) + 1))
+                p: Tuple[(int, int)] = (p[0], (((star[1] - i) % N) + 1))
             if ((p not in Ms) and (p != star) and (p not in changed)):
                 changed[p]: str = 'x'
             if (i == N):
-                star2: Tuple[(complex, complex)] = p
+                star2: Tuple[(int, int)] = p
                 if (N != 1):
                     changed[star2]: str = 'o'
-    score: complex = 0
-    sb: Dict[(str, complex)] = {
+    score: int = 0
+    sb: Dict[(str, int)] = {
         '+': 1,
         'x': 1,
         'o': 2,
@@ -56,14 +56,17 @@ fin: IO = open('d1.in')
 fout: IO = open('d1.out', 'w')
 T: int = int(fin.readline())
 for t in range(1, (T + 1)):
-    (N, M) = [int(x) for x in fin.readline().split(' ')]
-    Ms: Dict[(Tuple[(complex, complex)], str)] = {
+    line: List[str] = fin.readline().split(' ')
+    N: int = int(line[0])
+    M: int = int(line[1])
+    Ms: Dict[(Tuple[(int, int)], str)] = {
         
     }
     for _ in range(M):
-        (v, i, j) = fin.readline().split(' ')
-        i: float = int(i)
-        j: float = int(j)
+        tmp: List[str] = fin.readline().split(' ')
+        v: str = tmp[0]
+        i: int = int(tmp[1])
+        j: int = int(tmp[2])
         Ms[(i, j)]: str = v
     (score, changed) = f(N, Ms)
     fout.write(('Case #%s: %s %s\n' % (t, score, len(changed))))

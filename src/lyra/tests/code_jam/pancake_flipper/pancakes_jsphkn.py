@@ -1,10 +1,11 @@
 
+from typing import List
 
-def flips(s: str, k: int) -> None:
+def flips(s: str, k: int) -> int:
     if (len(s) < k):
         for pancake in s:
             if (pancake == '-'):
-                return 'IMPOSSIBLE'
+                return (- 1)
         return 0
     elif (s[0] == '-'):
         a: str = ''
@@ -15,17 +16,17 @@ def flips(s: str, k: int) -> None:
                 a += '-'
         new: str = (a + s[k:])
         subresult: int = flips(new, k)
-        if (subresult == 'IMPOSSIBLE'):
-            return 'IMPOSSIBLE'
+        if (subresult == (- 1)):
+            return (- 1)
         else:
             return (subresult + 1)
     else:
-        subresult: None = flips(s[1:], k)
-        if (subresult == 'IMPOSSIBLE'):
-            return 'IMPOSSIBLE'
-        else:
-            return subresult
+        return flips(s[1:], k)
 t: int = int(input())
 for i in range(1, (t + 1)):
-    (s, k) = input().split(' ')
-    print('Case #{}: {}'.format(i, flips(s, int(k))))
+    line: List[str] = input().split(' ')
+    result: int = flips(line[0], int(line[1]))
+    if (result != (- 1)):
+        print('Case #{}: {}'.format(i, result))
+    else:
+        print('Case #{}: {}'.format(i, 'IMPOSSIBLE'))

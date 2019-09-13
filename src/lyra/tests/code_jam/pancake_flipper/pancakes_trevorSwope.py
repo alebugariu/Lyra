@@ -1,5 +1,5 @@
 
-from typing import IO, Set
+from typing import List, IO, Set
 '\nCreated on Fri Apr 07 17:53:51 2017\n\n@author: Trevor\n'
 
 def flips(sequence: str, k: int) -> int:
@@ -50,13 +50,13 @@ def run() -> None:
     f: IO = open('A-small-attempt1.in', 'r')
     data: str = f.read()
     f.close()
-    inputs: str = data.splitlines()[1:]
+    inputs: List[str] = data.splitlines()[1:]
     answer: str = ''
     count: int = 1
     for line in inputs:
         sequence: str = line.split(' ')[0]
         k: str = line.split(' ')[1]
-        line_answer: float = flips(sequence, int(k))
+        line_answer: int = flips(sequence, int(k))
         if (line_answer == (- 1)):
             answer: str = (((answer + 'Case #') + str(count)) + ': IMPOSSIBLE\n')
         else:

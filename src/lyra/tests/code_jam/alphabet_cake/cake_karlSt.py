@@ -1,11 +1,13 @@
 
-from typing import List, Tuple, Dict, IO
+from typing import Dict, IO, List, Tuple
 inf: IO = open('input.txt', mode='r')
 outf: IO = open('output.txt', mode='w')
 cases: int = int(inf.readline())
 for case in range(1, (cases + 1)):
     rstr: str = (('Case #' + str(case)) + ': ')
-    (r, c) = [int(x) for x in inf.readline().split()]
+    rc: List[str] = inf.readline().split()
+    r: int = int(rc[0])
+    c: int = int(rc[1])
     lines: List[List[str]] = []
     kids: Dict[(str, Tuple[(int, int)])] = {
         

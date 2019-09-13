@@ -5,9 +5,9 @@ for iT in list(range(0, T)):
     lim: List[str] = input().split()
     N: int = int(lim[0])
     M: int = int(lim[1])
-    a: List[List[None]] = []
+    a: List[List[object]] = []
     for i in list(range(0, N)):
-        a.append(list(input()))
+        a.append([input()])
     cnt: int = 0
     for i in list(range(0, N)):
         for j in list(range(0, M)):
@@ -17,7 +17,7 @@ for iT in list(range(0, T)):
         for i in list(range(0, N)):
             for j in list(range(0, M)):
                 if (a[i][j] != '?'):
-                    orig: None = a[i][j]
+                    orig: object = a[i][j]
                     if ((j + 1) < M):
                         if (a[i][(j + 1)] == '?'):
                             l: int = i
@@ -26,13 +26,13 @@ for iT in list(range(0, T)):
                                 l: int = (l - 1)
                             while ((r < N) and (a[r][j] == orig)):
                                 r: int = (r + 1)
-                            flag: int = True
+                            flag: bool = True
                             for z in list(range((l + 1), r)):
                                 if (a[z][(j + 1)] != '?'):
-                                    flag: int = False
+                                    flag: bool = False
                             if flag:
                                 for z in list(range((l + 1), r)):
-                                    a[z][(j + 1)]: None = orig
+                                    a[z][(j + 1)]: object = orig
                                     cnt: int = (cnt - 1)
                     if ((j - 1) >= 0):
                         if (a[i][(j - 1)] == '?'):
@@ -42,13 +42,13 @@ for iT in list(range(0, T)):
                                 l: int = (l - 1)
                             while ((r < N) and (a[r][j] == orig)):
                                 r: int = (r + 1)
-                            flag: int = True
+                            flag: bool = True
                             for z in list(range((l + 1), r)):
                                 if (a[z][(j - 1)] != '?'):
-                                    flag: int = False
+                                    flag: bool = False
                             if flag:
                                 for z in list(range((l + 1), r)):
-                                    a[z][(j - 1)]: None = orig
+                                    a[z][(j - 1)]: object = orig
                                     cnt: int = (cnt - 1)
                     if ((i + 1) < N):
                         if (a[(i + 1)][j] == '?'):
@@ -58,13 +58,13 @@ for iT in list(range(0, T)):
                                 l: int = (l - 1)
                             while ((r < M) and (a[i][r] == orig)):
                                 r: int = (r + 1)
-                            flag: int = True
+                            flag: bool = True
                             for z in list(range((l + 1), r)):
                                 if (a[(i + 1)][z] != '?'):
-                                    flag: int = False
+                                    flag: bool = False
                             if flag:
                                 for z in list(range((l + 1), r)):
-                                    a[(i + 1)][z]: None = orig
+                                    a[(i + 1)][z]: object = orig
                                     cnt: int = (cnt - 1)
                     if ((i - 1) >= 0):
                         if (a[(i - 1)][j] == '?'):
@@ -74,13 +74,13 @@ for iT in list(range(0, T)):
                                 l: int = (l - 1)
                             while ((r < M) and (a[i][r] == orig)):
                                 r: int = (r + 1)
-                            flag: int = True
+                            flag: bool = True
                             for z in list(range((l + 1), r)):
                                 if (a[(i - 1)][z] != '?'):
-                                    flag: int = False
+                                    flag: bool = False
                             if flag:
                                 for z in list(range((l + 1), r)):
-                                    a[(i - 1)][z]: None = orig
+                                    a[(i - 1)][z]: object = orig
                                     cnt: int = (cnt - 1)
     print((('Case #' + str((iT + 1))) + ':'))
     for i in list(range(0, N)):
