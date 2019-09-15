@@ -6,7 +6,7 @@ from lyra.abstract_domains.assumption.assumption_domain import InputMixin
 from lyra.abstract_domains.basis import Basis
 from lyra.abstract_domains.state import State
 from lyra.abstract_domains.lattice import BottomMixin
-from lyra.abstract_domains.numerical.interval_domain import Input
+from lyra.abstract_domains.numerical.interval_domain import Input, Literal
 
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, SetDisplay, ListDisplay, \
     BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation
@@ -145,18 +145,41 @@ class ContainerState(Basis, InputMixin):
             current_state = self.store[target]
             keys = set(self._evaluation.visit(key, self, dict()))
             self.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
-            return self
         if isinstance(right, (SetDisplay, ListDisplay, DictDisplay)):
             # constant, so the dictionary/list becomes top
             keys = set()
             values = set()
             self.store[left] = ContainerLattice(keys, values)
-            return self
         if isinstance(left, Subscription):
             # nothing changes, as we don't know if the key was there before or not
-            return self
-        else:
-            return super()._substitute(left, right)
+            pass
+        self.substitute_keys_and_values(left, right)
+        super()._substitute(left, right)
+        return self
+
+    def substitute_keys_and_values(self, left, right):
+        for (variable, container_lattice) in self.store.items():
+            keys = container_lattice.keys
+            values = container_lattice.values
+            key = next((key for key in keys if not isinstance(key, Literal) and key == left), None)
+            current_state = self.store[variable]
+            if key is not None:
+                # substitute the key, if it is a constant, otherwise remove it
+                # TODO: make this more precise
+                other_keys = current_state.keys.difference({key})
+                if isinstance(right, Literal):
+                    self.store[variable] = ContainerLattice(other_keys.union({right}), current_state.values)
+                else:
+                    self.store[variable] = ContainerLattice(other_keys, current_state.values)
+            value = next((value for value in values if not isinstance(value, Literal) and value == left), None)
+            if value is not None:
+                # substitute the value, if it is a constant, otherwise remove it
+                # TODO: make this more precise
+                other_values = current_state.values.difference({value})
+                if isinstance(right, Literal):
+                    self.store[variable] = ContainerLattice(current_state.keys, other_values.union({right}))
+                else:
+                    self.store[variable] = ContainerLattice(current_state.keys, other_values)
 
     @copy_docstring(InputMixin.replace)
     def replace(self, variable: VariableIdentifier, expression: Expression) -> 'ContainerState':

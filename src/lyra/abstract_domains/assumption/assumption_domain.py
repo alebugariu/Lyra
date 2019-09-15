@@ -17,7 +17,7 @@ from lyra.core.expressions import VariableIdentifier, Expression, BinaryComparis
     Range, Literal, NegationFreeNormalExpression, UnaryBooleanOperation, BinaryBooleanOperation, \
     ExpressionVisitor, Input, ListDisplay, AttributeReference, Subscription, Slicing, \
     UnaryArithmeticOperation, BinaryArithmeticOperation, LengthIdentifier, TupleDisplay, \
-    SetDisplay, DictDisplay, BinarySequenceOperation
+    SetDisplay, DictDisplay, BinarySequenceOperation, Items, Values, Keys
 from lyra.core.statements import ProgramPoint
 from lyra.core.types import IntegerLyraType
 from lyra.core.utils import copy_docstring
@@ -288,7 +288,7 @@ class AssumptionState(State):
                             c = [do(x, y) for x, y in zip(c1, c2)]
                             if len(c1) != len(c2):  # lengths of list of constraints are different
                                 c.append(())  # add a star constraint
-                        elif m1 == m2:
+                        elif type(m1) == type(m2) and m1 == m2:
                             m: Expression = m1
                             c = [do(x, y) for x, y in zip(c1, c2)]
                             c.extend(c1[len(c2):])
@@ -451,6 +451,21 @@ class AssumptionState(State):
                     keys = [self.visit(item, left, right) for item in expr.keys]
                     values = [self.visit(item, left, right) for item in expr.values]
                     return DictDisplay(expr.typ, keys, values)
+
+                @copy_docstring(ExpressionVisitor.visit_Items)
+                def visit_Items(self, expr: Items):
+                    target_dict = self.visit(expr.target_dict)
+                    return Items(expr.type, target_dict)
+
+                @copy_docstring(ExpressionVisitor.visit_Values)
+                def visit_Values(self, expr: Values):
+                    target_dict = self.visit(expr.target_dict)
+                    return Values(expr.type, target_dict)
+
+                @copy_docstring(ExpressionVisitor.visit_Keys)
+                def visit_Keys(self, expr: Keys):
+                    target_dict = self.visit(expr.target_dict)
+                    return Keys(expr.type, target_dict)
 
                 @copy_docstring(ExpressionVisitor.visit_AttributeReference)
                 def visit_AttributeReference(self, expr, left=None, right=None):
@@ -684,6 +699,21 @@ class AssumptionState(State):
                 keys = [self.visit(item) for item in expr.keys]
                 values = [self.visit(item) for item in expr.values]
                 return DictDisplay(expr.typ, keys, values)
+
+            @copy_docstring(ExpressionVisitor.visit_Items)
+            def visit_Items(self, expr: Items):
+                target_dict = self.visit(expr.target_dict)
+                return Items(expr.type, target_dict)
+
+            @copy_docstring(ExpressionVisitor.visit_Values)
+            def visit_Values(self, expr: Values):
+                target_dict = self.visit(expr.target_dict)
+                return Values(expr.type, target_dict)
+
+            @copy_docstring(ExpressionVisitor.visit_Keys)
+            def visit_Keys(self, expr: Keys):
+                target_dict = self.visit(expr.target_dict)
+                return Keys(expr.type, target_dict)
 
             @copy_docstring(ExpressionVisitor.visit_AttributeReference)
             def visit_AttributeReference(self, expr: AttributeReference):
@@ -989,6 +1019,25 @@ class TypeRangeAlphabetAssumptionState(AssumptionState):
         from lyra.abstract_domains.assumption.range_domain import RangeState
         from lyra.abstract_domains.assumption.alphabet_domain import AlphabetState
         states = [TypeState, RangeState, AlphabetState]
+        arguments = defaultdict(lambda: {'variables': variables})
+        super().__init__(states, arguments, precursory)
+
+
+class RangeContainerAssumptionState(AssumptionState):
+    """Range+container assumption analysis state.
+
+    Reduced product of range and container constraining states,
+    and a stack of assumptions on the input data.
+
+    .. document private methods
+    .. automethod:: RangeContainerAssumptionState._assume
+    .. automethod:: RangeContainerAssumptionState._substitute
+    """
+
+    def __init__(self, variables: Set[VariableIdentifier], precursory: State = None):
+        from lyra.abstract_domains.assumption.range_domain import RangeState
+        from lyra.abstract_domains.assumption.container_domain import ContainerState
+        states = [RangeState, ContainerState]
         arguments = defaultdict(lambda: {'variables': variables})
         super().__init__(states, arguments, precursory)
 

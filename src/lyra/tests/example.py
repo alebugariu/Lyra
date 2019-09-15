@@ -1,7 +1,8 @@
-grade2gpa: Dict[str, float] = {'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0.0}
+grade2gpa: Dict[str, float] = input()
 
-file: List[str] = input()
-for line in file:
+number_of_students: int = int(input())
+for line_number in range(number_of_students):
+    line: str = input()
     data: List[str] = line.split()
     grades: int = int(data[1])
     gpa: float = 0.0
@@ -25,15 +26,7 @@ if 'G' in grade2gpa.keys():
 if '-1.0' in grade2gpa.values():
     raise ValueError
 
-students2grades: Dict[int, List[float]] = dict()
-number_of_students: int = input()
+students2grades: Dict[int, List[float]] = input()
 for student in range(number_of_students):
-    number_of_grades: int = input()
-    grades_for_student: List[float] = list()
-    for grade_counter in range(number_of_grades):
-        grade: float = input()
-        grades_for_student.add(grade)
-    if '-1.0' in grades_for_student:
-        raise ValueError
-    students2grades[student] = grades_for_student
-
+    grades_for_student: List[float] = students2grades[student]
+    print(grades_for_student)
