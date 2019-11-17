@@ -9,7 +9,7 @@ from lyra.abstract_domains.lattice import BottomMixin
 from lyra.abstract_domains.numerical.interval_domain import Input, Literal
 
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, SetDisplay, ListDisplay, \
-    BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation
+    BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation, Slicing, TupleDisplay
 from lyra.core.types import LyraType, ListLyraType
 from lyra.core.utils import copy_docstring
 
@@ -57,7 +57,7 @@ class ContainerLattice(BottomMixin):
 
     def __repr__(self):
         if self.is_bottom():
-            return "⊥";
+            return "⊥"
         if not self.keys:
             keys = "∅"
         else:
@@ -101,6 +101,7 @@ class ContainerState(Basis, InputMixin):
         super().__init__(variables, lattices, precursory=precursory)
         InputMixin.__init__(self, precursory)
 
+    @copy_docstring(Basis._assume)
     def _assume(self, condition: Expression, bwd: bool = False) -> 'ContainerState':
         if isinstance(condition, BinaryComparisonOperation):
             left = condition.left
@@ -138,6 +139,7 @@ class ContainerState(Basis, InputMixin):
                 return self._assume(rewritten_expression, bwd)
         return self
 
+    @copy_docstring(Basis._substitute)
     def _substitute(self, left: Expression, right: Expression) -> 'ContainerState':
         if isinstance(right, Subscription):
             target = right.target
@@ -181,6 +183,25 @@ class ContainerState(Basis, InputMixin):
                 else:
                     self.store[variable] = ContainerLattice(current_state.keys, other_values)
 
+    def _assign_any(self, left: Expression, right: Expression) -> 'ContainerState':
+        raise RuntimeError("Unexpected assignment in a backward analysis!")
+
+    @copy_docstring(State._assign_subscription)
+    def _assign_subscription(self, left: Subscription, right: Expression) -> 'ContainerState':
+        return self._assign_any(left, right)
+
+    @copy_docstring(State._assign_slicing)
+    def _assign_slicing(self, left: Slicing, right: Expression) -> 'ContainerState':
+        return self._assign_any(left, right)
+
+    @copy_docstring(State._substitute_subscription)
+    def _substitute_subscription(self, left: Subscription, right: Expression) -> 'ContainerState':
+        return self._assign_any(left, right)
+
+    @copy_docstring(State._substitute_slicing)
+    def _substitute_slicing(self, left: Slicing, right: Expression) -> 'ContainerState':
+        return self._assign_any(left, right)
+
     @copy_docstring(InputMixin.replace)
     def replace(self, variable: VariableIdentifier, expression: Expression) -> 'ContainerState':
         # collect the new variables appearing in the replacing expression
@@ -217,6 +238,72 @@ class ContainerState(Basis, InputMixin):
             self.store[var] = self.lattices[type(var.typ)](**self.arguments[type(var.typ)])
         return self
 
+    class ExpressionEvaluation(Basis.ExpressionEvaluation):
+        """Visitor that performs the evaluation of an expression in the container lattice."""
+
+        def visit_ListDisplay(self, expr: ListDisplay, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = evaluation
+            value = state.lattices[expr.typ](**state.arguments[expr.typ]).bottom()
+            for item in expr.items:
+                evaluated = self.visit(item, state, evaluated)
+                value = value.join(evaluated[item])
+            evaluation[expr] = value
+            return evaluation
+
+        def visit_TupleDisplay(self, expr: TupleDisplay, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = evaluation
+            value = state.lattices[expr.typ](**state.arguments[expr.typ]).bottom()
+            for item in expr.items:
+                evaluated = self.visit(item, state, evaluated)
+                value = value.join(evaluated[item])
+            evaluation[expr] = value
+            return evaluation
+
+        def visit_SetDisplay(self, expr: SetDisplay, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = evaluation
+            value = state.lattices[expr.typ](**state.arguments[expr.typ]).bottom()
+            for item in expr.items:
+                evaluated = self.visit(item, state, evaluated)
+                value = value.join(evaluated[item])
+            evaluation[expr] = value
+            return evaluation
+
+        def visit_DictDisplay(self, expr: DictDisplay, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = evaluation
+            value = state.lattices[expr.typ](**state.arguments[expr.typ]).bottom()
+            for key in expr.keys:
+                evaluated = self.visit(key, state, evaluated)
+                value = value.join(evaluated[key])
+            for val in expr.values:
+                evaluated = self.visit(val, state, evaluated)
+                value = value.join(evaluated[val])
+            evaluation[expr] = value
+            return evaluation
+
+        def visit_Subscription(self, expr: Subscription, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = self.visit(expr.target, state, evaluation)
+            evaluation[expr] = evaluated[expr.target]
+            return evaluation
+
+        def visit_Slicing(self, expr: Slicing, state=None, evaluation=None):
+            if expr in evaluation:
+                return evaluation  # nothing to be done
+            evaluated = self.visit(expr.target, state, evaluation)
+            evaluation[expr] = evaluated[expr.target]
+            return evaluation
+
+    _evaluation = ExpressionEvaluation()  # static class member shared between all instances
+
     # expression refinement
 
     class ExpressionRefinement(Basis.ExpressionRefinement):
@@ -240,6 +327,51 @@ class ContainerState(Basis, InputMixin):
             current_state = state.store[target]
             keys = {key}
             state.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
+
+        @copy_docstring(Basis.ExpressionRefinement.visit_ListDisplay)
+        def visit_ListDisplay(self, expr: ListDisplay, evaluation=None, value=None, state=None):
+            refined = evaluation[expr].meet(value)
+            updated = state
+            for item in expr.items:
+                updated = self.visit(item, evaluation, refined, updated)
+            return updated
+
+        @copy_docstring(Basis.ExpressionRefinement.visit_TupleDisplay)
+        def visit_TupleDisplay(self, expr: TupleDisplay, evaluation=None, value=None, state=None):
+            refined = evaluation[expr].meet(value)
+            updated = state
+            for item in expr.items:
+                updated = self.visit(item, evaluation, refined, updated)
+            return updated
+
+        @copy_docstring(Basis.ExpressionRefinement.visit_SetDisplay)
+        def visit_SetDisplay(self, expr: SetDisplay, evaluation=None, value=None, state=None):
+            refined = evaluation[expr].meet(value)
+            updated = state
+            for item in expr.items:
+                updated = self.visit(item, evaluation, refined, updated)
+            return updated
+
+        @copy_docstring(Basis.ExpressionRefinement.visit_DictDisplay)
+        def visit_DictDisplay(self, expr: DictDisplay, evaluation=None, value=None, state=None):
+            refined = evaluation[expr].meet(value)
+            updated = state
+            for key in expr.keys:
+                updated = self.visit(key, evaluation, refined, updated)
+            for val in expr.values:
+                updated = self.visit(val, evaluation, refined, updated)
+            return updated
+
+        @copy_docstring(Basis.ExpressionRefinement.visit_Subscription)
+        def visit_Subscription(self, expr: Subscription, evaluation=None, value=None, state=None):
+            self.subscription_refinement(expr, state)
+            return state
+
+        @copy_docstring(Basis.ExpressionRefinement.visit_Slicing)
+        def visit_Slicing(self, expr: Slicing, evaluation=None, value=None, state=None):
+            refined = evaluation[expr]  # weak update
+            state.store[expr.target] = refined
+            return state
 
     _refinement = ExpressionRefinement()  # static class member shared between instances
 
