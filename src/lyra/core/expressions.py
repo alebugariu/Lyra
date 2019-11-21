@@ -704,6 +704,23 @@ class LengthIdentifier(Identifier):
         return self._expression
 
 
+class ValuesIdentifier(Identifier):
+    """Dictionary values representation."""
+
+    def __init__(self, expression: Expression):
+        """Dictionary values construction.
+
+        :param expression: dictionary for which the values are being constructed
+        """
+        name = "values({})".format(expression)
+        super().__init__(expression.typ.val_typ, name)
+        self._expression = expression
+
+    @property
+    def expression(self):
+        return self._expression
+
+
 class ListDisplay(Expression):
     """List display representation.
 

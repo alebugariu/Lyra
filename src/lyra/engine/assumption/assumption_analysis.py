@@ -9,7 +9,7 @@ from lyra.abstract_domains.assumption.assumption_domain import TypeRangeAssumpti
     TypeAlphabetAssumptionState, TypeRangeAlphabetAssumptionState, TypeQuantityAssumptionState, \
     TypeWordSetAssumptionState, TypeRangeWordSetAssumptionState, \
     TypeRangeAlphabetWordSetAssumptionState, QuantityRangeWordSetAssumptionState, \
-    SignIntervalStringSetProductState, RangeContainerAssumptionState
+    SignIntervalStringSetProductState, TypeRangeContainerAssumptionState
 from lyra.abstract_domains.assumption.quantity_domain import QuantityState
 from lyra.abstract_domains.assumption.range_domain import RangeState
 from lyra.abstract_domains.assumption.type_domain import TypeState
@@ -77,12 +77,12 @@ class TypeQuantityAssumptionAnalysis(Runner):
         return TypeQuantityAssumptionState(self.variables)
 
 
-class RangeContainerAssumptionAnalysis(Runner):
+class TypeRangeContainerAssumptionAnalysis(Runner):
     def interpreter(self):
         return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(), 3)
 
     def state(self):
-        return RangeContainerAssumptionState(self.variables)
+        return TypeRangeContainerAssumptionState(self.variables)
 
 
 class TypeRangeAssumptionAnalysis(Runner):

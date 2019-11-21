@@ -1067,21 +1067,22 @@ class TypeRangeAlphabetAssumptionState(AssumptionState):
         super().__init__(states, arguments, precursory)
 
 
-class RangeContainerAssumptionState(AssumptionState):
-    """Range+container assumption analysis state.
+class TypeRangeContainerAssumptionState(AssumptionState):
+    """Type+range+container assumption analysis state.
 
-    Reduced product of range and container constraining states,
+    Reduced product of type, range and container constraining states,
     and a stack of assumptions on the input data.
 
     .. document private methods
-    .. automethod:: RangeContainerAssumptionState._assume
-    .. automethod:: RangeContainerAssumptionState._substitute
+    .. automethod:: TypeRangeContainerAssumptionState._assume
+    .. automethod:: TypeRangeContainerAssumptionState._substitute
     """
 
     def __init__(self, variables: Set[VariableIdentifier], precursory: State = None):
+        from lyra.abstract_domains.assumption.type_domain import TypeState
         from lyra.abstract_domains.assumption.range_domain import RangeState
         from lyra.abstract_domains.assumption.container_domain import ContainerState
-        states = [RangeState, ContainerState]
+        states = [TypeState, RangeState, ContainerState]
         arguments = defaultdict(lambda: {'variables': variables})
         super().__init__(states, arguments, precursory)
 

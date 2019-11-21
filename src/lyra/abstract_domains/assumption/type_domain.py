@@ -19,9 +19,9 @@ from lyra.abstract_domains.store import Store
 from lyra.core.expressions import VariableIdentifier, Expression, ExpressionVisitor, Literal, \
     Input, ListDisplay, Range, AttributeReference, Subscription, Slicing, \
     UnaryArithmeticOperation, BinaryArithmeticOperation, LengthIdentifier, TupleDisplay, \
-    SetDisplay, DictDisplay, BinarySequenceOperation, Keys, Values, Items
+    SetDisplay, DictDisplay, BinarySequenceOperation, Keys, Values, Items, ValuesIdentifier, Identifier
 from lyra.core.types import LyraType, BooleanLyraType, IntegerLyraType, FloatLyraType, \
-    StringLyraType, ListLyraType
+    StringLyraType, ListLyraType, DictLyraType
 from lyra.core.utils import copy_docstring
 
 
@@ -428,27 +428,16 @@ class TypeState(Store, StateWithSummarization, InputMixin):
 
     @copy_docstring(State._substitute_variable)
     def _substitute_variable(self, left: VariableIdentifier, right: Expression) -> 'TypeState':
-        is_list = isinstance(left.typ, ListLyraType)
-        is_boolean_list = is_list and isinstance(left.typ.typ, BooleanLyraType)
-        is_integer_list = is_list and isinstance(left.typ.typ, IntegerLyraType)
-        is_float_list = is_list and isinstance(left.typ.typ, FloatLyraType)
-        is_string_list = is_list and isinstance(left.typ.typ, StringLyraType)
+        typ = left.typ
         # record the current value of the substituted variable
         value: TypeLattice = deepcopy(self.store[left])
-        if isinstance(left.typ, BooleanLyraType) or is_boolean_list:
-            # forget the current value of the substituted variable
-            self.store[left].boolean()
-        elif isinstance(left.typ, IntegerLyraType) or is_integer_list:
-            # forget the current value of the substituted variable
-            self.store[left].integer()
-        elif isinstance(left.typ, FloatLyraType) or is_float_list:
-            # forget the current value of the substituted variable
-            self.store[left].float()
-        elif isinstance(left.typ, StringLyraType) or is_string_list:
-            # forget the current value of the substituted variable
-            self.store[left].top()
+        if not isinstance(typ, DictLyraType):
+            self.forget(left, typ)
         else:
-            raise ValueError(f"Variable type {left.typ} is unsupported!")
+            # forget the current value of the dictionary
+            self.forget(left, typ.key_typ)
+            # forget the current value of the dictionary's values
+            self.forget(ValuesIdentifier(left), typ.val_typ)
         # evaluate the right-hand side bottom-up using the updated store and the Lyra types
         evaluation = self._evaluation.visit(right, self, dict())
         # restrict the value of the right-hand side using that of the substituted variable
@@ -459,8 +448,28 @@ class TypeState(Store, StateWithSummarization, InputMixin):
         # check whether the property ∀x. m(x) ≤ TypeLattice.from_lyra_type(x.typ) still holds
         store = self.store
         assert all(store[v].less_equal(TypeLattice.from_lyra_type(v.typ)) for v in store.keys())
-
         return self
+
+    def forget(self, variable: Identifier, typ: LyraType):
+        is_list = isinstance(typ, ListLyraType)
+        is_boolean_list = is_list and isinstance(typ.typ, BooleanLyraType)
+        is_integer_list = is_list and isinstance(typ.typ, IntegerLyraType)
+        is_float_list = is_list and isinstance(typ.typ, FloatLyraType)
+        is_string_list = is_list and isinstance(typ.typ, StringLyraType)
+        if isinstance(typ, BooleanLyraType) or is_boolean_list:
+            # forget the current value of the substituted variable
+            self.store[variable].boolean()
+        elif isinstance(typ, IntegerLyraType) or is_integer_list:
+            # forget the current value of the substituted variable
+            self.store[variable].integer()
+        elif isinstance(typ, FloatLyraType) or is_float_list:
+            # forget the current value of the substituted variable
+            self.store[variable].float()
+        elif isinstance(typ, StringLyraType) or is_string_list:
+            # forget the current value of the substituted variable
+            self.store[variable].top()
+        else:
+            raise ValueError(f"Variable type {typ} is unsupported!")
 
     @copy_docstring(InputMixin.replace)
     def replace(self, variable: VariableIdentifier, expression: Expression) -> 'TypeState':

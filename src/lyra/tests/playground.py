@@ -81,8 +81,8 @@
 # from lyra.engine.assumption.assumption_analysis import AlphabetAnalysis
 # AlphabetAnalysis().main("example.py")
 
-from lyra.engine.assumption.assumption_analysis import RangeContainerAssumptionAnalysis
-RangeContainerAssumptionAnalysis().main("example.py")
+from lyra.engine.assumption.assumption_analysis import TypeRangeContainerAssumptionAnalysis
+TypeRangeContainerAssumptionAnalysis().main("example.py")
 
 #from lyra.engine.assumption.assumption_analysis import TypeQuantityAssumptionAnalysis
 #TypeQuantityAssumptionAnalysis().main("example.py")
