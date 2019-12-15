@@ -1,7 +1,3 @@
-
-from typing import Tuple, Dict, List
-from sys import stdin
-from sys import setrecursionlimit
 setrecursionlimit(1000000)
 T: int = int(stdin.readline().strip())
 lines: List[str] = []

@@ -1,7 +1,3 @@
-
-from typing import List
-import sys
-
 def update(s: List[str], i: int) -> None:
     if (s[i] == '+'):
         s[i]: str = '-'

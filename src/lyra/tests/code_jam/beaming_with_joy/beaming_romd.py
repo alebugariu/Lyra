@@ -1,5 +1,3 @@
-
-from typing import IO, List
 LINES_PARAM: int = 0
 INPUT_FILE_NAME: str = 'C-small-attempt4.in'
 OUTPUT_FILE_NAME: str = 'C-small-attempt4.out'

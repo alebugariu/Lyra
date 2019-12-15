@@ -1,5 +1,3 @@
-
-from typing import List
 n: int = int(input())
 for case in range(1, (n + 1)):
     line: List[str] = input().split(' ')

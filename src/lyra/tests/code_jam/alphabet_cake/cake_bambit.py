@@ -1,7 +1,3 @@
-
-from typing import List, Dict, Tuple
-import sys
-
 def solve() -> None:
     line: List[str] = sys.stdin.readline().rstrip().split()
     R: int = int(line[0])

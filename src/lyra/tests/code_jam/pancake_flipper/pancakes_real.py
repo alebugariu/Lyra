@@ -1,6 +1,3 @@
-
-from typing import List
-import sys
 sys.setrecursionlimit(10000)
 
 def gao(s: str, k: int) -> int:

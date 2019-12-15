@@ -1,6 +1,3 @@
-
-from typing import List
-
 def flips(s: str, k: int) -> int:
     if (len(s) < k):
         for pancake in s:

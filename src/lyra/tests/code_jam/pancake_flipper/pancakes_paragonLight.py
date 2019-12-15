@@ -1,6 +1,3 @@
-
-from typing import Dict, List
-
 def checkOnes(l: Dict[(int, int)]) -> int:
     ones: int = 0
     last: int = (- 1)

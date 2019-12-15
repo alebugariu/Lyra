@@ -1,5 +1,3 @@
-
-from typing import List, Dict, Tuple
 T: int = int(input().strip())
 for t in range(1, (T + 1)):
     line: List[str] = input().strip().split(' ')

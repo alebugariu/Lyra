@@ -1,5 +1,3 @@
-
-from typing import Dict, IO, List, Tuple
 inf: IO = open('input.txt', mode='r')
 outf: IO = open('output.txt', mode='w')
 cases: int = int(inf.readline())

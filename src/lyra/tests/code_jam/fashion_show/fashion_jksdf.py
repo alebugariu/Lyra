@@ -1,7 +1,3 @@
-
-from typing import List, Tuple
-from typing import cast
-
 def printout(n: object, v: object) -> None:
     print(((('Case #' + str(n)) + ': ') + str(v)))
 

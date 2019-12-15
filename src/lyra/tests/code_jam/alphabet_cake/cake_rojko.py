@@ -1,6 +1,3 @@
-
-from typing import List, Set, Dict
-import sys
 sys.setrecursionlimit(10000)
 
 def fung(abec: List[str], g: List[List[str]], r: int, c: int) -> bool:

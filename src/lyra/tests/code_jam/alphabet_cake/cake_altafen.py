@@ -1,7 +1,3 @@
-
-from typing import List, Tuple
-from itertools import *
-
 def valid(cake: List[List[str]]) -> bool:
     cake: List[List[str]] = [c[:] for c in cake]
     seen: str = ''

@@ -1,7 +1,3 @@
-
-from typing import List, IO, Set
-'\nCreated on Fri Apr 07 17:53:51 2017\n\n@author: Trevor\n'
-
 def flips(sequence: str, k: int) -> int:
     count: int = 0
     reached: Set[str] = set()

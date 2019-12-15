@@ -1,7 +1,3 @@
-
-from typing import List, Dict
-import sys
-
 def ok(pattern: str) -> bool:
     for c in pattern:
         if (c != '+'):

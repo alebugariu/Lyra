@@ -1,6 +1,3 @@
-
-from typing import List, IO
-
 class TestCase():
 
     def __init__(self: 'TestCase', Hd: int, Ad: int, Hk: int, Ak: int, B: int, D: int) -> None:

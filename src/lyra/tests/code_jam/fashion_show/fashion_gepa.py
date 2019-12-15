@@ -1,7 +1,3 @@
-
-from typing import List, Tuple
-import sys
-
 def delta(N: int, x: List[List[str]], y: List[List[str]]) -> str:
     total: int = 0
     res: List[str] = [None]

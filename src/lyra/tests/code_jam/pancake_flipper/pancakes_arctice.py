@@ -1,6 +1,3 @@
-
-from typing import Tuple, List
-
 def flipped(pancakes: List[str]) -> List[str]:
     return [('+' if (pancake == '-') else '-') for pancake in pancakes]
 

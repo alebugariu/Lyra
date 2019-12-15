@@ -1,7 +1,3 @@
-
-from typing import List, Tuple
-from typing import cast
-
 def score(l: List[List[str]], n: int) -> int:
     s: int = 0
     for i in range(n):

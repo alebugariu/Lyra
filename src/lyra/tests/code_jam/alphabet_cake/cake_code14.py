@@ -1,5 +1,3 @@
-
-from typing import List
 t: int = int(input())
 for ti in range(1, (t + 1)):
     line: List[str] = input().split()

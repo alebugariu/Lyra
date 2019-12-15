@@ -1,6 +1,3 @@
-
-from typing import Dict, IO, List, Tuple
-
 def f(N: int, Ms: Dict[(Tuple[(int, int)], str)]) -> Tuple[(int, Dict[(Tuple[(int, int)], str)])]:
     star: Tuple[(int, int)] = (1, 1)
     changed: Dict[(Tuple[(int, int)], str)] = {
