@@ -79,7 +79,7 @@ class TypeQuantityAssumptionAnalysis(Runner):
 
 class TypeRangeContainerAssumptionAnalysis(Runner):
     def interpreter(self):
-        return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(), 3)
+        return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(runner=self), 3)
 
     def state(self):
         return TypeRangeContainerAssumptionState(self.variables)
