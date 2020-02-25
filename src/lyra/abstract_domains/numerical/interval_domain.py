@@ -172,6 +172,9 @@ class IntervalLattice(BottomMixin, ArithmeticMixin, BooleanMixin, SequenceMixin)
     def _div(self, other: 'IntervalLattice') -> 'IntervalLattice':
         return self._replace(type(self)())
 
+    def _mod(self, other: 'ArithmeticMixin') -> 'ArithmeticMixin':
+        return self._replace(type(self)())
+
     # boolean operations
 
     @copy_docstring(BooleanMixin.false)
@@ -235,73 +238,178 @@ class IntervalState(BasisWithSummarization):
         lattices = defaultdict(lambda: IntervalLattice)
         super().__init__(variables, lattices, precursory=precursory)
         for v in self.variables:
-            if isinstance(v.typ, SequenceLyraType):
+            if isinstance(v.typ, (SequenceLyraType, ContainerLyraType)):
                 self.store[LengthIdentifier(v)] = lattices[IntegerLyraType()](lower=0)
+
+    @copy_docstring(BasisWithSummarization.is_bottom)
+    def is_bottom(self) -> bool:
+        """The current state is bottom if `any` non-summary variable maps to a bottom element,
+        or if the length identifier of `any` summary variable maps to a bottom element."""
+        for variable, element in self.store.items():
+            if isinstance(variable.typ, (SequenceLyraType, ContainerLyraType)):
+                if element.is_bottom() and self.store[LengthIdentifier(variable)].is_bottom():
+                    return True
+            elif element.is_bottom():
+                return True
+        return False
 
     @copy_docstring(BasisWithSummarization._assign)
     def _assign(self, left: Expression, right: Expression) -> 'IntervalState':
         # update length identifiers, if appropriate
-        if isinstance(left, VariableIdentifier) and isinstance(left.typ, (SequenceLyraType, ContainerLyraType)):
-            self.store[LengthIdentifier(left)] = self._length.visit(right, self)
-        elif isinstance(left, Subscription) and isinstance(left.target.typ, SequenceLyraType):
-            length = self.store[LengthIdentifier(left.target)]
-            key = deepcopy(self._evaluation.visit(left.key, self, dict())[left.key])
-            if key.less_equal(self.lattices[left.key.typ](lower=0)):    # key is positive
-                if length.upper < key.lower:    # key is definitely larger than length
-                    return self.bottom()
-                lower = self.lattices[left.key.typ](lower=key.lower)
-                self.store[LengthIdentifier(left.target)] = length.meet(lower)
-            elif key.less_equal(self.lattices[left.key.typ](upper=-1)):     # key is negative
-                if length.upper + key.upper < 0:    # key is definitely smaller than length
-                    return self.bottom()
-                upper = self.lattices[left.key.typ](lower=-key.upper)
-                self.store[LengthIdentifier(left.target)] = length.meet(upper)
-        elif isinstance(left, Slicing) and isinstance(left.target.typ, SequenceLyraType):
-            self.store[LengthIdentifier(left.target)] = self._length.visit(right, self)
+        if isinstance(left, VariableIdentifier):
+            if isinstance(left.typ, (SequenceLyraType, ContainerLyraType)):
+                self.store[LengthIdentifier(left)] = self._length.visit(right, self)
+        elif isinstance(left, Subscription) and isinstance(left.target, VariableIdentifier):
+            if isinstance(left.target.typ, SequenceLyraType):
+                length = self.store[LengthIdentifier(left.target)]
+                key = deepcopy(self._evaluation.visit(left.key, self, dict())[left.key])
+                if key.less_equal(self.lattices[left.key.typ](lower=0)):    # key is positive
+                    if length.upper < key.lower:    # key is definitely larger than length
+                        return self.bottom()
+                    lower = self.lattices[left.key.typ](lower=key.lower)
+                    self.store[LengthIdentifier(left.target)] = length.meet(lower)
+                elif key.less_equal(self.lattices[left.key.typ](upper=-1)):     # key is negative
+                    if length.upper + key.upper < 0:    # key is definitely smaller than length
+                        return self.bottom()
+                    upper = self.lattices[left.key.typ](lower=-key.upper)
+                    self.store[LengthIdentifier(left.target)] = length.meet(upper)
+        elif isinstance(left, Slicing) and isinstance(left.target, VariableIdentifier): #x[i:j] = e
+            if isinstance(left.target.typ, SequenceLyraType):   # x[i:j] = e
+                current = self.store[LengthIdentifier(left.target)]      # current length
+                # under-approximate length of left
+                lattice = self.lattices[IntegerLyraType()]
+                slicing = lattice(lower=1, upper=1)     # default under-approximation
+                # over-approximate length of right
+                extra = self._length.visit(right, self)
+                # len(x) = len(x) - len(x[j:i]) + len(e)
+                self.store[LengthIdentifier(left.target)] = current.sub(slicing).add(extra)
         # perform the assignment
         super()._assign(left, right)
         return self
 
-    @copy_docstring(BasisWithSummarization._assume)
-    def _assume(self, condition: Expression, bwd: bool = False) -> 'IntervalState':
-        normal = NegationFreeNormalExpression().visit(condition)
-        if isinstance(normal, VariableIdentifier) and isinstance(normal.typ, BooleanLyraType):
-            evaluation = self._evaluation.visit(normal, self, dict())
-            true = self.lattices[normal.typ](**self.arguments[normal.typ]).true()
-            return self._refinement.visit(normal, evaluation, true, self)
-        elif isinstance(normal, UnaryBooleanOperation):
-            if normal.operator == UnaryBooleanOperation.Operator.Neg:
-                expression = normal.expression
-                if isinstance(expression, VariableIdentifier):
-                    typ = expression.typ
-                    if isinstance(expression.typ, BooleanLyraType):
-                        evaluation = self._evaluation.visit(normal, self, dict())
-                        false = self.lattices[typ](**self.arguments[typ]).false()
-                        return self._refinement.visit(expression, evaluation, false, self)
-        elif isinstance(normal, BinaryBooleanOperation):
-            return self._assume_binarybooleanoperation(normal, bwd=bwd)
-        elif isinstance(normal, BinaryComparisonOperation):
-            if normal.operator == BinaryComparisonOperation.Operator.Is:
-                error = f"Assumption of a comparison with {normal.operator} is unsupported!"
-                raise ValueError(error)
-            elif normal.operator == BinaryComparisonOperation.Operator.IsNot:
-                error = f"Assumption of a comparison with {normal.operator} is unsupported!"
-                raise ValueError(error)
-            elif normal.operator == BinaryComparisonOperation.Operator.In:
-                if normal.forloop and not bwd:  # assumption in a for loop during forward analysis
-                    top = self.lattices[normal.left.typ](**self.arguments[normal.left.typ]).top()
-                    left = defaultdict(lambda: top)
-                else:   # normal assumption
-                    left = self._evaluation.visit(normal.left, self, dict())
-                right = self._evaluation.visit(normal.right, self, dict())
-                return self._refinement.visit(normal.left, left, right[normal.right], self)
-            elif normal.operator == BinaryComparisonOperation.Operator.NotIn:
-                return self
-            evaluation = self._evaluation.visit(normal.left, self, dict())
-            nonpositive = self.lattices[normal.typ](upper=0)
-            return self._refinement.visit(normal.left, evaluation, nonpositive, self)
-        error = f"Assumption of a {normal.__class__.__name__} expression is unsupported!"
-        raise ValueError(error)
+    @copy_docstring(BasisWithSummarization._assume_variable)
+    def _assume_variable(self, condition: VariableIdentifier, neg: bool = False) -> 'IntervalState':
+        if isinstance(condition.typ, BooleanLyraType):
+            evaluation = self._evaluation.visit(condition, self, dict())
+            if neg:
+                value = self.lattices[condition.typ](**self.arguments[condition.typ]).false()
+            else:
+                value = self.lattices[condition.typ](**self.arguments[condition.typ]).true()
+            return self._refinement.visit(condition, evaluation, value, self)
+        raise ValueError(f"Assumption of variable {condition} is unsupported!")
+
+    @copy_docstring(BasisWithSummarization._weak_update)
+    def _weak_update(self, variables: Set[VariableIdentifier], previous: 'BasisWithSummarization'):
+        for var in variables:
+            self.store[var].join(previous.store[var])
+            if isinstance(var.typ, (SequenceLyraType, ContainerLyraType)):
+                self.store[LengthIdentifier(var)].join(previous.store[LengthIdentifier(var)])
+        return self
+
+    @copy_docstring(BasisWithSummarization._assume_eq_comparison)
+    def _assume_eq_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        # left == right -> left - right <= 0 && right - left <= 0
+        zero = Literal(IntegerLyraType(), "0")
+        minus = BinaryArithmeticOperation.Operator.Sub
+        operator = BinaryComparisonOperation.Operator.LtE
+        expr1 = BinaryArithmeticOperation(condition.left.typ, condition.left, minus, condition.right)
+        expr1 = BinaryComparisonOperation(condition.typ, expr1, operator, zero)
+        expr2 = BinaryArithmeticOperation(condition.right.typ, condition.right, minus, condition.left)
+        expr2 = BinaryComparisonOperation(condition.typ, expr2, operator, zero)
+        conj = BinaryBooleanOperation.Operator.And
+        return self._assume_binary_boolean(BinaryBooleanOperation(condition.typ, expr1, conj, expr2), bwd=bwd)
+
+    @copy_docstring(BasisWithSummarization._assume_noteq_comparison)
+    def _assume_noteq_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        # left != right -> left - (right - 1) <= 0 || right - (left - 1) <= 0
+        zero = Literal(IntegerLyraType(), "0")
+        one = Literal(IntegerLyraType(), "1")
+        minus = BinaryArithmeticOperation.Operator.Sub
+        operator = BinaryComparisonOperation.Operator.LtE
+        expr1 = BinaryArithmeticOperation(condition.right.typ, condition.right, minus, one)
+        expr1 = BinaryArithmeticOperation(condition.left.typ, condition.left, minus, expr1)
+        expr1 = BinaryComparisonOperation(condition.typ, expr1, operator, zero)
+        expr2 = BinaryArithmeticOperation(condition.left.typ, condition.left, minus, one)
+        expr2 = BinaryArithmeticOperation(condition.right.typ, condition.right, minus, expr2)
+        expr2 = BinaryComparisonOperation(condition.typ, expr2, operator, zero)
+        disj = BinaryBooleanOperation.Operator.Or
+        return self._assume_binary_boolean(BinaryBooleanOperation(condition.typ, expr1, disj, expr2), bwd=bwd)
+
+    @copy_docstring(BasisWithSummarization._assume_lt_comparison)
+    def _assume_lt_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        # left < right -> left - (right - 1) <= 0
+        zero = Literal(IntegerLyraType(), "0")
+        minus = BinaryArithmeticOperation.Operator.Sub
+        one = Literal(IntegerLyraType(), "1")
+        right = BinaryArithmeticOperation(condition.right.typ, condition.right, minus, one)
+        left = BinaryArithmeticOperation(condition.left.typ, condition.left, minus, right)
+        operator = BinaryComparisonOperation.Operator.LtE
+        normal = BinaryComparisonOperation(condition.typ, left, operator, zero)
+        evaluation = self._evaluation.visit(normal.left, self, dict())
+        nonpositive = self.lattices[normal.typ](upper=0)
+        return self._refinement.visit(normal.left, evaluation, nonpositive, self)
+
+    @copy_docstring(BasisWithSummarization._assume_lte_comparison)
+    def _assume_lte_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        # left <= right -> left - right <= 0
+        zero = Literal(IntegerLyraType(), "0")
+        if isinstance(condition.right, Literal) and condition.right == zero:
+            normal = condition
+        else:
+            minus = BinaryArithmeticOperation.Operator.Sub
+            left = BinaryArithmeticOperation(condition.left.typ, condition.left, minus, condition.right)
+            normal = BinaryComparisonOperation(condition.typ, left, condition.operator, zero)
+        evaluation = self._evaluation.visit(normal.left, self, dict())
+        nonpositive = self.lattices[normal.typ](upper=0)
+        return self._refinement.visit(normal.left, evaluation, nonpositive, self)
+
+    @copy_docstring(BasisWithSummarization._assume_gt_comparison)
+    def _assume_gt_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        # left > right -> right - (left - 1) <= 0
+        zero = Literal(IntegerLyraType(), "0")
+        one = Literal(IntegerLyraType(), "1")
+        minus = BinaryArithmeticOperation.Operator.Sub
+        left = BinaryArithmeticOperation(condition.left.typ, condition.left, minus, one)
+        right = BinaryArithmeticOperation(condition.right.typ, condition.right, minus, left)
+        operator = BinaryComparisonOperation.Operator.LtE
+        normal = BinaryComparisonOperation(condition.typ, right, operator, zero)
+        evaluation = self._evaluation.visit(normal.left, self, dict())
+        nonpositive = self.lattices[normal.typ](upper=0)
+        return self._refinement.visit(normal.left, evaluation, nonpositive, self)
+
+    @copy_docstring(BasisWithSummarization._assume_gte_comparison)
+    def _assume_gte_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        # left >= right -> right - left <= 0
+        zero = Literal(IntegerLyraType(), "0")
+        minus = BinaryArithmeticOperation.Operator.Sub
+        right = BinaryArithmeticOperation(condition.right.typ, condition.right, minus, condition.left)
+        operator = BinaryComparisonOperation.Operator.LtE
+        normal = BinaryComparisonOperation(condition.typ, right, operator, zero)
+        evaluation = self._evaluation.visit(normal.left, self, dict())
+        nonpositive = self.lattices[normal.typ](upper=0)
+        return self._refinement.visit(normal.left, evaluation, nonpositive, self)
+
+    @copy_docstring(BasisWithSummarization._assume_is_comparison)
+    def _assume_is_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        raise ValueError(f"Assumption of a binary comparison with {condition.operator} is unsupported!")
+
+    @copy_docstring(BasisWithSummarization._assume_isnot_comparison)
+    def _assume_isnot_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        raise ValueError(f"Assumption of a binary comparison with {condition.operator} is unsupported!")
+
+    @copy_docstring(BasisWithSummarization._assume_in_comparison)
+    def _assume_in_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        if condition.forloop and not bwd:  # assumption in a for loop during forward analysis
+            top = self.lattices[condition.left.typ](**self.arguments[condition.left.typ]).top()
+            left = defaultdict(lambda: top)
+        else:  # condition assumption
+            left = self._evaluation.visit(condition.left, self, dict())
+        right = self._evaluation.visit(condition.right, self, dict())
+        return self._refinement.visit(condition.left, left, right[condition.right], self)
+
+    @copy_docstring(BasisWithSummarization._assume_notin_comparison)
+    def _assume_notin_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'IntervalState':
+        return self
 
     # expression evaluation
 
@@ -350,7 +458,8 @@ class IntervalState(BasisWithSummarization):
         @copy_docstring(ExpressionVisitor.visit_VariableIdentifier)
         def visit_VariableIdentifier(self, expr: VariableIdentifier, state=None):
             if isinstance(expr.typ, SequenceLyraType):
-                return state.store[LengthIdentifier(expr)]
+                length = LengthIdentifier(expr)
+                return state.store.get(length, state.lattices[IntegerLyraType()](lower=0))
             raise ValueError(f"Unexpected expression during sequence length computation.")
 
         @copy_docstring(ExpressionVisitor.visit_LengthIdentifier)
@@ -371,7 +480,7 @@ class IntervalState(BasisWithSummarization):
 
         @copy_docstring(ExpressionVisitor.visit_DictDisplay)
         def visit_DictDisplay(self, expr: DictDisplay, state=None):
-            raise ValueError(f"Unexpected expression during sequence length computation.")
+            return state.lattices[IntegerLyraType()](len(expr.keys), len(expr.keys))
 
         @copy_docstring(ExpressionVisitor.visit_AttributeReference)
         def visit_AttributeReference(self, expr: AttributeReference, state=None):
@@ -383,7 +492,7 @@ class IntervalState(BasisWithSummarization):
 
         @copy_docstring(ExpressionVisitor.visit_Slicing)
         def visit_Slicing(self, expr: Slicing, state=None):
-            lattice: IntervalLattice = state.lattices[IntegerLyraType()]
+            lattice = state.lattices[IntegerLyraType()]
 
             def is_one(stride):
                 literal = isinstance(stride, Literal)

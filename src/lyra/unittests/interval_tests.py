@@ -8,53 +8,33 @@ Interval Analysis - Unit Tests
 
 import glob
 import os
+import sys
 import unittest
 
-import sys
-
+from lyra.abstract_domains.numerical.interval_domain import IntervalState
 from lyra.engine.backward import BackwardInterpreter
 from lyra.engine.forward import ForwardInterpreter
 from lyra.semantics.backward import DefaultBackwardSemantics
 from lyra.semantics.forward import DefaultForwardSemantics
-
-from lyra.abstract_domains.numerical.interval_domain import IntervalState, BoxStateWithSummarization
 from lyra.unittests.runner import TestRunner
 
 
 class ForwardIntervalTest(TestRunner):
 
     def interpreter(self):
-        return ForwardInterpreter(self.cfg, DefaultForwardSemantics(), 3)
+        return ForwardInterpreter(self.cfgs, self.fargs, DefaultForwardSemantics(), 3)
 
     def state(self):
         return IntervalState(self.variables)
-
-
-class ForwardBoxTest(TestRunner):
-
-    def interpreter(self):
-        return ForwardInterpreter(self.cfg, DefaultForwardSemantics(), 3)
-
-    def state(self):
-        return BoxStateWithSummarization(self.variables)
 
 
 class BackwardIntervalTest(TestRunner):
 
     def interpreter(self):
-        return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(), 3)
+        return BackwardInterpreter(self.cfgs, self.fargs, DefaultBackwardSemantics(), 3)
 
     def state(self):
         return IntervalState(self.variables)
-
-
-class BackwardBoxTest(TestRunner):
-
-    def interpreter(self):
-        return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(), 3)
-
-    def state(self):
-        return BoxStateWithSummarization(self.variables)
 
 
 def forward():

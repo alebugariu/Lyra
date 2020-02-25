@@ -19,9 +19,9 @@ from lyra.abstract_domains.store import Store
 from lyra.core.expressions import VariableIdentifier, Expression, ExpressionVisitor, Literal, \
     Input, ListDisplay, Range, AttributeReference, Subscription, Slicing, \
     UnaryArithmeticOperation, BinaryArithmeticOperation, LengthIdentifier, TupleDisplay, \
-    SetDisplay, DictDisplay, BinarySequenceOperation, Keys, Values, Items, ValuesIdentifier, Identifier
+    SetDisplay, DictDisplay, BinarySequenceOperation, BinaryComparisonOperation, Keys, Values
 from lyra.core.types import LyraType, BooleanLyraType, IntegerLyraType, FloatLyraType, \
-    StringLyraType, ListLyraType, DictLyraType
+    StringLyraType, ListLyraType, SequenceLyraType
 from lyra.core.utils import copy_docstring
 
 
@@ -314,6 +314,32 @@ class TypeLattice(BottomMixin, ArithmeticMixin, SequenceMixin, JSONMixin):
             return self.bottom()
         return self._replace(TypeLattice(TypeLattice.Status.Float))
 
+    @copy_docstring(ArithmeticMixin._mod)
+    def _mod(self, other: 'TypeLattice') -> 'TypeLattice':
+        """
+        Boolean % Boolean = Integer
+        Boolean / Integer = Integer
+        Boolean / Float = Float
+        Boolean / String = ⊥
+        Integer / Boolean = Integer
+        Integer / Integer = Integer
+        Integer / Float = Float
+        Integer / String = ⊥
+        Float / Boolean = Float
+        Float / Integer = Float
+        Float / Float = Float
+        Float / String = ⊥
+        String / Boolean = ⊥
+        String / Integer = ⊥
+        String / Float = ⊥
+        String / String = ⊥
+        """
+        if self.is_boolean() and other.is_boolean():
+            return self._replace(TypeLattice(TypeLattice.Status.Integer))
+        elif self.is_top() or other.is_top():
+            return self.bottom()
+        return self._replace(TypeLattice(max(self.element, other.element)))
+
     # sequence operations
 
     @copy_docstring(SequenceMixin._concat)
@@ -402,8 +428,56 @@ class TypeState(Store, StateWithSummarization, InputMixin):
     def _assign_variable(self, left: VariableIdentifier, right: Expression) -> 'TypeState':
         raise RuntimeError("Unexpected assignment in a backward analysis!")
 
-    @copy_docstring(State._assume)
-    def _assume(self, condition: Expression, bwd: bool = False) -> 'TypeState':
+    @copy_docstring(StateWithSummarization._weak_update)
+    def _weak_update(self, variables: Set[VariableIdentifier], previous: 'TypeState'):
+        for var in variables:
+            self.store[var].join(previous.store[var])
+            if isinstance(var.typ, SequenceLyraType):
+                self.store[LengthIdentifier(var)].join(previous.store[LengthIdentifier(var)])
+        return self
+
+    @copy_docstring(State._assume_variable)
+    def _assume_variable(self, condition: VariableIdentifier, neg: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_eq_comparison)
+    def _assume_eq_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_noteq_comparison)
+    def _assume_noteq_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_lt_comparison)
+    def _assume_lt_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_lte_comparison)
+    def _assume_lte_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_gt_comparison)
+    def _assume_gt_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_gte_comparison)
+    def _assume_gte_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_is_comparison)
+    def _assume_is_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_isnot_comparison)
+    def _assume_isnot_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_in_comparison)
+    def _assume_in_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
+        return self
+
+    @copy_docstring(State._assume_notin_comparison)
+    def _assume_notin_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'TypeState':
         return self
 
     @copy_docstring(State.enter_if)
@@ -422,22 +496,38 @@ class TypeState(Store, StateWithSummarization, InputMixin):
     def exit_loop(self) -> 'TypeState':
         return self  # nothing to be done
 
+    @copy_docstring(State.forget_variable)
+    def forget_variable(self, variable: VariableIdentifier) -> 'TypeState':
+        self.store[variable].top()
+        return self
+
     @copy_docstring(State.output)
     def _output(self, output: Expression) -> 'TypeState':
         return self  # nothing to be done
 
     @copy_docstring(State._substitute_variable)
     def _substitute_variable(self, left: VariableIdentifier, right: Expression) -> 'TypeState':
-        typ = left.typ
+        is_list = isinstance(left.typ, ListLyraType)
+        is_boolean_list = is_list and isinstance(left.typ.typ, BooleanLyraType)
+        is_integer_list = is_list and isinstance(left.typ.typ, IntegerLyraType)
+        is_float_list = is_list and isinstance(left.typ.typ, FloatLyraType)
+        is_string_list = is_list and isinstance(left.typ.typ, StringLyraType)
         # record the current value of the substituted variable
         value: TypeLattice = deepcopy(self.store[left])
-        if not isinstance(typ, DictLyraType):
-            self.forget(left, typ)
+        if isinstance(left.typ, BooleanLyraType) or is_boolean_list:
+            # forget the current value of the substituted variable
+            self.store[left].boolean()
+        elif isinstance(left.typ, IntegerLyraType) or is_integer_list:
+            # forget the current value of the substituted variable
+            self.store[left].integer()
+        elif isinstance(left.typ, FloatLyraType) or is_float_list:
+            # forget the current value of the substituted variable
+            self.store[left].float()
+        elif isinstance(left.typ, StringLyraType) or is_string_list:
+            # forget the current value of the substituted variable
+            self.store[left].top()
         else:
-            # forget the current value of the dictionary
-            self.forget(left, typ.key_typ)
-            # forget the current value of the dictionary's values
-            self.forget(ValuesIdentifier(left), typ.val_typ)
+            raise ValueError(f"Variable type {left.typ} is unsupported!")
         # evaluate the right-hand side bottom-up using the updated store and the Lyra types
         evaluation = self._evaluation.visit(right, self, dict())
         # restrict the value of the right-hand side using that of the substituted variable
@@ -448,28 +538,8 @@ class TypeState(Store, StateWithSummarization, InputMixin):
         # check whether the property ∀x. m(x) ≤ TypeLattice.from_lyra_type(x.typ) still holds
         store = self.store
         assert all(store[v].less_equal(TypeLattice.from_lyra_type(v.typ)) for v in store.keys())
-        return self
 
-    def forget(self, variable: Identifier, typ: LyraType):
-        is_list = isinstance(typ, ListLyraType)
-        is_boolean_list = is_list and isinstance(typ.typ, BooleanLyraType)
-        is_integer_list = is_list and isinstance(typ.typ, IntegerLyraType)
-        is_float_list = is_list and isinstance(typ.typ, FloatLyraType)
-        is_string_list = is_list and isinstance(typ.typ, StringLyraType)
-        if isinstance(typ, BooleanLyraType) or is_boolean_list:
-            # forget the current value of the substituted variable
-            self.store[variable].boolean()
-        elif isinstance(typ, IntegerLyraType) or is_integer_list:
-            # forget the current value of the substituted variable
-            self.store[variable].integer()
-        elif isinstance(typ, FloatLyraType) or is_float_list:
-            # forget the current value of the substituted variable
-            self.store[variable].float()
-        elif isinstance(typ, StringLyraType) or is_string_list:
-            # forget the current value of the substituted variable
-            self.store[variable].top()
-        else:
-            raise ValueError(f"Variable type {typ} is unsupported!")
+        return self
 
     @copy_docstring(InputMixin.replace)
     def replace(self, variable: VariableIdentifier, expression: Expression) -> 'TypeState':
@@ -483,8 +553,7 @@ class TypeState(Store, StateWithSummarization, InputMixin):
             # add the new variables to the current state
             for fresh in variables:
                 self.variables.append(fresh)
-                self.store[fresh] = self.lattices[type(fresh.typ)](
-                    **self.arguments[type(fresh.typ)])
+                self.store[fresh] = self.lattices[type(fresh.typ)](**self.arguments[type(fresh.typ)])
             # replace the given variable with the given expression
             self._substitute(variable, expression)
         return self
@@ -627,11 +696,6 @@ class TypeState(Store, StateWithSummarization, InputMixin):
 
         @copy_docstring(ExpressionVisitor.visit_Values)
         def visit_Values(self, expr: Values, state=None, evaluation=None):
-            error = f"Evaluation for a {expr.__class__.__name__} expression is not yet supported!"
-            raise ValueError(error)
-
-        @copy_docstring(ExpressionVisitor.visit_Items)
-        def visit_Items(self, expr: Items, state=None, evaluation=None):
             error = f"Evaluation for a {expr.__class__.__name__} expression is not yet supported!"
             raise ValueError(error)
 
@@ -809,11 +873,6 @@ class TypeState(Store, StateWithSummarization, InputMixin):
 
         @copy_docstring(ExpressionVisitor.visit_Values)
         def visit_Values(self, expr: Values, state=None, evaluation=None):
-            error = f"Refinement for a {expr.__class__.__name__} expression is not yet supported!"
-            raise ValueError(error)
-
-        @copy_docstring(ExpressionVisitor.visit_Items)
-        def visit_Items(self, expr: Items, state=None, evaluation=None):
             error = f"Refinement for a {expr.__class__.__name__} expression is not yet supported!"
             raise ValueError(error)
 

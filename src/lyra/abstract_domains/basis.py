@@ -7,9 +7,8 @@ Interface of an abstract domain mapping variables to lattice elements.
 :Author: Caterina Urban
 """
 from abc import ABCMeta
-from collections import defaultdict
 from copy import deepcopy
-from typing import Set, Dict, Type, Any, Union
+from typing import Set, Dict, Type, Any
 
 from lyra.abstract_domains.lattice import Lattice, ArithmeticMixin, BooleanMixin, SequenceMixin
 from lyra.abstract_domains.state import State, StateWithSummarization
@@ -38,7 +37,7 @@ class Basis(Store, State, metaclass=ABCMeta):
         State.__init__(self, precursory)
 
     @copy_docstring(State._assign_variable)
-    def _assign_variable(self, left: VariableIdentifier, right: Expression) -> 'BasisWithSummarization':
+    def _assign_variable(self, left: VariableIdentifier, right: Expression) -> 'Basis':
         evaluation = self._evaluation.visit(right, self, dict())
         self.store[left] = evaluation[right]
         return self
@@ -59,8 +58,13 @@ class Basis(Store, State, metaclass=ABCMeta):
     def exit_loop(self):
         return self  # nothing to be done
 
+    @copy_docstring(State.forget_variable)
+    def forget_variable(self, variable: VariableIdentifier) -> 'Basis':
+        self.store[variable].top()
+        return self
+
     @copy_docstring(State._output)
-    def _output(self, output: Expression) -> 'BasisWithSummarization':
+    def _output(self, output: Expression) -> 'Basis':
         return self  # nothing to be done
 
     @copy_docstring(State._substitute_variable)
@@ -214,6 +218,12 @@ class Basis(Store, State, metaclass=ABCMeta):
             elif expr.operator == BinaryArithmeticOperation.Operator.Div:
                 if isinstance(value1, ArithmeticMixin):
                     evaluated2[expr] = deepcopy(value1).div(value2)
+                else:
+                    evaluated2[expr] = state.lattices[expr.typ](**state.arguments[expr.typ]).top()
+                return evaluated2
+            elif expr.operator == BinaryArithmeticOperation.Operator.Mod:
+                if isinstance(value1, ArithmeticMixin):
+                    evaluated2[expr] = deepcopy(value1).mod(value2)
                 else:
                     evaluated2[expr] = state.lattices[expr.typ](**state.arguments[expr.typ]).top()
                 return evaluated2
@@ -401,6 +411,13 @@ class Basis(Store, State, metaclass=ABCMeta):
                     refinement2 = deepcopy(refined).top()
                 updated2 = self.visit(expr.right, evaluation, refinement2, updated1)
                 return updated2
+            elif expr.operator == BinaryArithmeticOperation.Operator.Mod:
+                refined = evaluation[expr].meet(value)
+                refinement1 = deepcopy(refined).top()
+                updated1 = self.visit(expr.left, evaluation, refinement1, state)
+                refinement2 = deepcopy(refined).top()
+                updated2 = self.visit(expr.right, evaluation, refinement2, updated1)
+                return updated2
             raise ValueError(f"Binary arithmetic operator '{expr.operator}' is unsupported!")
 
         @copy_docstring(ExpressionVisitor.visit_BinarySequenceOperation)
@@ -448,34 +465,11 @@ class BasisWithSummarization(StateWithSummarization, Basis, metaclass=ABCMeta):
         Lattice operations and statements modify the current state.
     """
 
-    @copy_docstring(Basis.is_bottom)
-    def is_bottom(self) -> bool:
-        """The current state is bottom if `any` non-summary variable maps to a bottom element,
-        or if the length identifier of `any` summary variable maps to a bottom element."""
-        for variable, element in self.store.items():
-            if isinstance(variable.typ, SequenceLyraType):
-                if element.is_bottom() and self.store[LengthIdentifier(variable)].is_bottom():
-                    return True
-            elif element.is_bottom():
-                return True
-        return False
-
-    def _assume_binarybooleanoperation(self, condition: BinaryBooleanOperation,
-                                       bwd: bool = False) -> 'BasisWithSummarization':
-        """Assume that some binary boolean condition holds in the current state.
-
-        :param condition: expression representing the assumed binary boolean condition
-        :param bwd: whether the assumption happens in a backward analysis (default: False)
-        :return: current state modified to satisfy the assumption
-        """
-        if condition.operator == BinaryBooleanOperation.Operator.And:
-            right = deepcopy(self)._assume(condition.right, bwd=bwd)
-            return self._assume(condition.left, bwd=bwd).meet(right)
-        if condition.operator == BinaryBooleanOperation.Operator.Or:
-            right = deepcopy(self)._assume(condition.right, bwd=bwd)
-            return self._assume(condition.left, bwd=bwd).join(right)
-        error = f"Assumption of a boolean condition with {condition.operator} is unsupported!"
-        raise ValueError(error)
+    @copy_docstring(StateWithSummarization._weak_update)
+    def _weak_update(self, variables: Set[VariableIdentifier], previous: 'BasisWithSummarization'):
+        for var in variables:
+            self.store[var].join(previous.store[var])
+        return self
 
     # expression evaluation
 
@@ -536,16 +530,22 @@ class BasisWithSummarization(StateWithSummarization, Basis, metaclass=ABCMeta):
         def visit_Subscription(self, expr: Subscription, state=None, evaluation=None):
             if expr in evaluation:
                 return evaluation  # nothing to be done
-            evaluated = self.visit(expr.target, state, evaluation)
-            evaluation[expr] = evaluated[expr.target]
+            target = expr
+            while isinstance(target, (Subscription, Slicing)):
+                target = target.target
+            evaluated = self.visit(target, state, evaluation)
+            evaluation[expr] = evaluated[target]
             return evaluation
 
         @copy_docstring(ExpressionVisitor.visit_Slicing)
         def visit_Slicing(self, expr: Slicing, state=None, evaluation=None):
             if expr in evaluation:
                 return evaluation  # nothing to be done
-            evaluated = self.visit(expr.target, state, evaluation)
-            evaluation[expr] = evaluated[expr.target]
+            target = expr
+            while isinstance(target, (Subscription, Slicing)):
+                target = target.target
+            evaluated = self.visit(target, state, evaluation)
+            evaluation[expr] = evaluated[target]
             return evaluation
 
     _evaluation = ExpressionEvaluation()
@@ -591,13 +591,19 @@ class BasisWithSummarization(StateWithSummarization, Basis, metaclass=ABCMeta):
         @copy_docstring(ExpressionVisitor.visit_Subscription)
         def visit_Subscription(self, expr: Subscription, evaluation=None, value=None, state=None):
             refined = evaluation[expr]      # weak update
-            state.store[expr.target] = refined
+            target = expr
+            while isinstance(target, (Subscription, Slicing)):
+                target = target.target
+            state.store[target] = refined
             return state
 
         @copy_docstring(ExpressionVisitor.visit_Slicing)
         def visit_Slicing(self, expr: Slicing, evaluation=None, value=None, state=None):
             refined = evaluation[expr]      # weak update
-            state.store[expr.target] = refined
+            target = expr
+            while isinstance(target, (Subscription, Slicing)):
+                target = target.target
+            state.store[target] = refined
             return state
 
     _refinement = ExpressionRefinement()
