@@ -60,7 +60,7 @@ class AlphabetAnalysis(Runner):
 class ContainerAnalysis(Runner):
 
     def interpreter(self):
-        return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(), 3)
+        return BackwardInterpreter(self.cfgs, self.fargs, DefaultBackwardSemantics(), 3)
 
     def state(self):
         return ContainerState(self.variables)
@@ -77,7 +77,7 @@ class TypeQuantityAssumptionAnalysis(Runner):
 
 class TypeRangeContainerAssumptionAnalysis(Runner):
     def interpreter(self):
-        return BackwardInterpreter(self.cfg, DefaultBackwardSemantics(runner=self), 3)
+        return BackwardInterpreter(self.cfgs, self.fargs, DefaultBackwardSemantics(), 3)
 
     def state(self):
         return TypeRangeContainerAssumptionState(self.variables)

@@ -101,6 +101,50 @@ class ContainerState(Basis, InputMixin):
         super().__init__(variables, lattices, precursory=precursory)
         InputMixin.__init__(self, precursory)
 
+    @copy_docstring(Basis._assume_variable)
+    def _assume_variable(self, condition: VariableIdentifier, neg: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_eq_comparison)
+    def _assume_eq_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_noteq_comparison)
+    def _assume_noteq_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_lt_comparison)
+    def _assume_lt_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_lte_comparison)
+    def _assume_lte_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_gt_comparison)
+    def _assume_gt_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_gte_comparison)
+    def _assume_gte_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_is_comparison)
+    def _assume_is_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_isnot_comparison)
+    def _assume_isnot_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_in_comparison)
+    def _assume_in_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
+    @copy_docstring(Basis._assume_notin_comparison)
+    def _assume_notin_comparison(self, condition: BinaryComparisonOperation, bwd: bool = False) -> 'ContainerState':
+        return self
+
     @copy_docstring(Basis._assume)
     def _assume(self, condition: Expression, bwd: bool = False) -> 'ContainerState':
         if isinstance(condition, BinaryComparisonOperation):
