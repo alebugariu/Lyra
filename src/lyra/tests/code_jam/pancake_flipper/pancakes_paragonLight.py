@@ -1,33 +1,15 @@
-def checkOnes(l: Dict[(int, int)]) -> int:
-    ones: int = 0
-    last: int = (- 1)
-    for i in range(len(l)):
-        if (i > 0):
-            last: int = l[(i - 1)]
-        if (l[i] == 0):
-            if (last == 1):
-                ones += 1
-            else:
-                continue
-        elif (last == 1):
-            continue
-        else:
-            continue
-    return ones
-
-
 cases: str = input().strip()
 print(cases)
 for index in range(1, (int(cases) + 1)):
     rowData: str = input().strip()
-    strs: List[str] = rowData.split(' ')
+    strs: List[str] = rowData.split()
+    old: str = strs[0]
     k: int = int(strs[1])
-    L: int = len(strs[0])
+    L: int = len(old)
     strF: str = ''
     for i in range(L):
         strF += '+'
     flag: bool = True
-    old: str = strs[0]
     List: List[str] = []
     if (old == strF):
         flag: bool = False
@@ -67,7 +49,6 @@ for index in range(1, (int(cases) + 1)):
             step: int = (- 1)
         else:
             step += 1
-            del List[:]
             List: List[str] = newList[:]
     o: str = str(step)
     if (step == (- 1)):
