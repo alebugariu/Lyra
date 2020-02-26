@@ -60,12 +60,19 @@ class UserDefinedCallSemantics(BackwardSemantics):
         :return: state modified by the call statement
         """
         fname, fcfg, _ = stmt.name, interpreter.cfgs[stmt.name], deepcopy(state)
+
+        formal_args = interpreter.fargs[fname]
+        # add local function variables to the state
+        local_vars = set(fcfg.variables).difference(formal_args)
+        for local in local_vars:
+            state = state.add_variable(local).forget_variable(local)
+
         # analyze the function
         fresult = interpreter.analyze(fcfg, state)
         fstate = fresult.get_node_result(fcfg.in_node)[state][-1]
         state = state.bottom().join(deepcopy(fstate))
         # substitute function actual to formal parameters
-        for formal, actual in zip(interpreter.fargs[fname], stmt.arguments):
+        for formal, actual in zip(formal_args, stmt.arguments):
             if isinstance(actual, Call) and actual.name in interpreter.cfgs:
             # TODO: right might not be a Call but just contain a Call
                 state.result = {formal}

@@ -60,12 +60,12 @@ class ContainerLattice(BottomMixin):
         if not self.keys:
             keys = "∅"
         else:
-            keys = ", ".join("{}".format(key) for key in self.keys)
+            keys = ", ".join("{}".format(key) for key in sorted(self.keys, key=lambda key: str(key)))
             keys = "{" + keys + "}"
         if not self.values:
             values = "∅"
         else:
-            values = ", ".join("{}".format(value) for value in self.values)
+            values = ", ".join("{}".format(value) for value in sorted(self.values, key=lambda key: str(value)))
             values = "{" + values + "}"
         return "(" + keys + ", " + values + ")"
 
@@ -197,7 +197,7 @@ class ContainerState(Basis, InputMixin):
             self.store[left] = ContainerLattice(keys, values)
         if isinstance(left, Subscription):
             # nothing changes, as we don't know if the key was there before or not
-            pass
+            return self
         self.substitute_keys_and_values(left, right)
         super()._substitute(left, right)
         return self
@@ -249,11 +249,11 @@ class ContainerState(Basis, InputMixin):
 
     @copy_docstring(State._substitute_subscription)
     def _substitute_subscription(self, left: Subscription, right: Expression) -> 'ContainerState':
-        return self._assign_any(left, right)
+        return self._substitute(left, right)
 
     @copy_docstring(State._substitute_slicing)
     def _substitute_slicing(self, left: Slicing, right: Expression) -> 'ContainerState':
-        return self._assign_any(left, right)
+        return self._substitute(left, right)
 
     @copy_docstring(InputMixin.replace)
     def replace(self, variable: VariableIdentifier, expression: Expression) -> 'ContainerState':
