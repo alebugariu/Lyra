@@ -20,8 +20,7 @@ class ContainerLattice(BottomMixin):
     The default abstraction is ``(∅, ∅)`` (empty set of keys, empty set of values), representing that
     no keys and no values must be in the container.
 
-    The bottom element of the lattice is ``⊥``,  which represents that all the possible keys and all the
-    possible values must be in the container.
+    The bottom element of the lattice is ``⊥``.
 
     .. document private methods
     .. automethod:: ContainerLattice._less_equal
@@ -75,7 +74,7 @@ class ContainerLattice(BottomMixin):
         return self._replace(type(self)(set(), set()))
 
     def is_top(self) -> bool:
-        return not self.keys and not self.values
+        return not self.is_bottom() and not self.keys and not self.values
 
     def _less_equal(self, other: 'ContainerLattice') -> bool:
         return other.keys.issubset(self.keys) and other.values.issubset(self.values)
