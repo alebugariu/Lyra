@@ -226,6 +226,16 @@ class ContainerState(Basis, InputMixin):
                 else:
                     self.store[variable] = ContainerLattice(current_state.keys, other_values)
 
+    @copy_docstring(Basis._output)
+    def _output(self, output: Expression) -> 'ContainerState':
+        if isinstance(output, Subscription):
+            target = output.target
+            key = output.key
+            current_state = self.store[target]
+            keys = set(self._evaluation.visit(key, self, dict()))
+            self.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
+        return self
+
     def _assign_any(self, left: Expression, right: Expression) -> 'ContainerState':
         raise RuntimeError("Unexpected assignment in a backward analysis!")
 
