@@ -72,7 +72,11 @@ class BackwardInterpreter(Interpreter):
                 for edge in edges:
                     if edge.target in self.result.result:
                         ctx = context
-                        successor = deepcopy(self.result.get_node_result(edge.target)[ctx][0])
+                        node_result = self.result.get_node_result(edge.target)
+                        if ctx in node_result.keys():
+                            successor = deepcopy(node_result[ctx][0])
+                        else:
+                            successor = deepcopy(initial).bottom()
                     else:
                         successor = deepcopy(initial).bottom()
                     # handle unconditional non-default edges

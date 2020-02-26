@@ -187,6 +187,8 @@ class ContainerState(Basis, InputMixin):
         if isinstance(right, Subscription):
             target = right.target
             key = right.key
+            while isinstance(target, (Subscription, Slicing)):
+                target = target.target
             current_state = self.store[target]
             keys = set(self._evaluation.visit(key, self, dict()))
             self.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
@@ -377,6 +379,8 @@ class ContainerState(Basis, InputMixin):
         def subscription_refinement(self, expr, state):
             target = expr.target
             key = expr.key
+            while isinstance(target, (Subscription, Slicing)):
+                target = target.target
             current_state = state.store[target]
             keys = {key}
             state.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
