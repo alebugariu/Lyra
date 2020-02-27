@@ -13,7 +13,8 @@ def flips(sequence: str, k: int) -> int:
                     return count
                 else:
                     reached.add(item)
-                    new_iterations.update(generate_flips(item, k, reached))
+                    new_iteration: str = generate_flips(item, k, reached)
+                    new_iterations.update(new_iteration)
             iterations: Set[str] = new_iterations
             count: int = (count + 1)
         return (- 1)
@@ -30,7 +31,8 @@ def done(sequence: str) -> bool:
 def generate_flips(sequence: str, k: int, reached: Set[str]) -> Set[str]:
     new_iterations: Set[str] = set()
     for i in range(0, ((len(sequence) + 1) - k)):
-        new_string: str = ((sequence[:i] + flip(sequence[i:(i + k)])) + sequence[(i + k):])
+        flipped_string: str = flip(sequence[i:(i + k)])
+        new_string: str = sequence[:i] + flipped_string + sequence[(i + k):]
         if (new_string not in reached):
             new_iterations.add(new_string)
             reached.add(new_string)

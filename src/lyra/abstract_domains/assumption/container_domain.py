@@ -255,7 +255,7 @@ class ContainerState(Basis, InputMixin):
 
     @copy_docstring(State._substitute_slicing)
     def _substitute_slicing(self, left: Slicing, right: Expression) -> 'ContainerState':
-        return self._substitute(left, right)
+        return self  # nothing changes
 
     @copy_docstring(InputMixin.replace)
     def replace(self, variable: VariableIdentifier, expression: Expression) -> 'ContainerState':
