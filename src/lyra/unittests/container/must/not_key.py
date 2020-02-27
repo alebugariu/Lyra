@@ -1,3 +1,4 @@
+# STATE: d -> (∅, ∅); len(d) -> (∅, ∅)
 d: Dict[int, int] = input()
 
 # STATE: d -> ({3}, ∅); len(d) -> (∅, ∅)

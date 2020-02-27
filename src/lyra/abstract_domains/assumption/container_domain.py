@@ -6,10 +6,11 @@ from lyra.abstract_domains.assumption.assumption_domain import InputMixin
 from lyra.abstract_domains.basis import Basis
 from lyra.abstract_domains.state import State
 from lyra.abstract_domains.lattice import BottomMixin
-from lyra.abstract_domains.numerical.interval_domain import Input, Literal
+from lyra.abstract_domains.numerical.interval_domain import Input, Literal, BinaryOperation
 
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, SetDisplay, ListDisplay, \
-    BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation, Slicing, TupleDisplay
+    BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation, Slicing, TupleDisplay, \
+    BinaryArithmeticOperation
 from lyra.core.types import LyraType, ListLyraType
 from lyra.core.utils import copy_docstring
 
@@ -195,6 +196,10 @@ class ContainerState(Basis, InputMixin):
         if isinstance(left, Subscription):
             # nothing changes, as we don't know if the key was there before or not
             return self
+        if isinstance(right, (SetDisplay, ListDisplay, DictDisplay)):
+            # constant, so the dictionary/list becomes top
+            self.store[left].top()
+            return self
         super()._substitute(left, right)
         self.substitute_keys_and_values(left, right)
         return self
@@ -230,6 +235,10 @@ class ContainerState(Basis, InputMixin):
             key = output.key
             current_state = self.store[target]
             self.store[target] = ContainerLattice(current_state.keys.union({key}), current_state.values)
+        elif isinstance(output, BinaryArithmeticOperation) and \
+                output.operator == BinaryArithmeticOperation.Operator.Add:  # concat
+            self._output(output.left)
+            self._output(output.right)
         return self
 
     def _assign_any(self, left: Expression, right: Expression) -> 'ContainerState':

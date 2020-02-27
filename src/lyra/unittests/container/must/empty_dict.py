@@ -1,5 +1,5 @@
 # STATE: d -> (∅, ∅); k -> (∅, ∅); len(d) -> (∅, ∅); result -> (∅, ∅)
-d: Dict[int, int] = input()
+d: Dict[int, int] = {}
 
 # STATE: d -> ({3}, ∅); k -> (∅, ∅); len(d) -> (∅, ∅); result -> (∅, ∅)
 k: int = 3

@@ -1,3 +1,4 @@
+# STATE: data -> (∅, ∅); gpa -> (∅, ∅); grade2gpa -> (∅, ∅); grades -> (∅, ∅); i -> (∅, ∅); len(data) -> (∅, ∅); len(grade2gpa) -> (∅, ∅); line_number -> (∅, ∅); number_of_students -> (∅, ∅); result -> (∅, ∅)
 grade2gpa: Dict[str, float] = {'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0.0}
 
 number_of_students: int = int(input())
