@@ -109,17 +109,20 @@ class AssignmentSemantics(BackwardSemantics):
         """
         if isinstance(stmt.right, Call) and stmt.right.name in interpreter.cfgs:
             # TODO: right might not be a Call but just contain a Call
+            formal_args = interpreter.fargs[stmt.right.name]
+            local_vars = set(interpreter.cfgs[stmt.right.name].variables).difference(formal_args)
+
             # add formal function parameters and local function variables
-            for formal in interpreter.fargs[stmt.right.name]:
+            for formal in formal_args:
                 state = state.add_variable(formal).forget_variable(formal)
-            for local in interpreter.cfgs[stmt.right.name].variables:
+            for local in local_vars:
                 state = state.add_variable(local).forget_variable(local)
             lhs = self.semantics(stmt.left, state, interpreter)
             state = self.semantics(stmt.right, lhs, interpreter)
             # remove local function variables and formal function parameters
-            for local in interpreter.cfgs[stmt.right.name].variables:
+            for local in local_vars:
                 state = state.remove_variable(local)
-            for formal in interpreter.fargs[stmt.right.name]:
+            for formal in formal_args:
                 state = state.remove_variable(formal)
             return state
         lhs = self.semantics(stmt.left, state, interpreter).result      # lhs evaluation
