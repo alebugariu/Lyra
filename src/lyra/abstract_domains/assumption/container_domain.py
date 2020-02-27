@@ -65,7 +65,7 @@ class ContainerLattice(BottomMixin):
         if not self.values:
             values = "∅"
         else:
-            values = ", ".join("{}".format(value) for value in sorted(self.values, key=lambda key: str(value)))
+            values = ", ".join("{}".format(value) for value in sorted(self.values, key=lambda value: str(value)))
             values = "{" + values + "}"
         return "(" + keys + ", " + values + ")"
 
@@ -190,38 +190,33 @@ class ContainerState(Basis, InputMixin):
             while isinstance(target, (Subscription, Slicing)):
                 target = target.target
             current_state = self.store[target]
-            keys = set(self._evaluation.visit(key, self, dict()))
-            self.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
-        if isinstance(right, (SetDisplay, ListDisplay, DictDisplay)):
-            # constant, so the dictionary/list becomes top
-            keys = set()
-            values = set()
-            self.store[left] = ContainerLattice(keys, values)
+            self.store[target] = ContainerLattice(current_state.keys.union({key}), current_state.values)
+            return self
         if isinstance(left, Subscription):
             # nothing changes, as we don't know if the key was there before or not
             return self
-        self.substitute_keys_and_values(left, right)
         super()._substitute(left, right)
+        self.substitute_keys_and_values(left, right)
         return self
 
     def substitute_keys_and_values(self, left, right):
         for (variable, container_lattice) in self.store.items():
             keys = container_lattice.keys
             values = container_lattice.values
-            key = next((key for key in keys if not isinstance(key, Literal) and key == left), None)
+            key = next((key for key in keys if not isinstance(key, Literal) and type(key) == type(left) and
+                        key == left), None)
             current_state = self.store[variable]
             if key is not None:
                 # substitute the key, if it is a constant, otherwise remove it
-                # TODO: make this more precise
                 other_keys = current_state.keys.difference({key})
                 if isinstance(right, Literal):
                     self.store[variable] = ContainerLattice(other_keys.union({right}), current_state.values)
                 else:
                     self.store[variable] = ContainerLattice(other_keys, current_state.values)
-            value = next((value for value in values if not isinstance(value, Literal) and value == left), None)
+            value = next((value for value in values if not isinstance(value, Literal) and type(value) == type(left) and
+                          value == left), None)
             if value is not None:
                 # substitute the value, if it is a constant, otherwise remove it
-                # TODO: make this more precise
                 other_values = current_state.values.difference({value})
                 if isinstance(right, Literal):
                     self.store[variable] = ContainerLattice(current_state.keys, other_values.union({right}))
@@ -234,8 +229,7 @@ class ContainerState(Basis, InputMixin):
             target = output.target
             key = output.key
             current_state = self.store[target]
-            keys = set(self._evaluation.visit(key, self, dict()))
-            self.store[target] = ContainerLattice(current_state.keys.union(keys), current_state.values)
+            self.store[target] = ContainerLattice(current_state.keys.union({key}), current_state.values)
         return self
 
     def _assign_any(self, left: Expression, right: Expression) -> 'ContainerState':

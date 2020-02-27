@@ -51,7 +51,8 @@ def compute(N: int, x: List[List[str]]) -> str:
             y[r][(r - 1)]: str = 'x'
         else:
             y[r][r]: str = 'x'
-    return delta(N, x, y)
+    d: str = delta(N, x, y)
+    return d
 
 def parse() -> Tuple[(int, List[List[str]])]:
     line: List[str] = input().strip().split()
