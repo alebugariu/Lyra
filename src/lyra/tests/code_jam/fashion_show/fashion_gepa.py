@@ -80,4 +80,5 @@ for i in range(T):
     data: List[List[str]] = parse_result[1]
     if (((i * count) >= (part * T)) and ((i * count) < ((part + 1) * T))):
         result: str = compute(N, data)
-        print('Case #' + str(i + 1) + ':' + result)
+        case_number: int = i + 1
+        print('Case #' + str(case_number) + ':' + result)

@@ -86,6 +86,9 @@ for _t in range(1, (_T + 1)):
             dj: int = corner[3]
             score += do(G, N, C, (i + (di * d)), j)
             score += do(G, N, C, i, (j + (dj * d)))
-    print('Case #' + str(_t) + ':' + str(score) + ' ' + str(len(C)))
+    number_of_changes: int = len(C)
+    print('Case #' + str(_t) + ':' + str(score) + ' ' + str(number_of_changes))
     for (i, j) in C:
-        print(C[(i, j)] + ' ' + str(i + 1) + ' ' + (j + 1))
+        i_plus_one: int = i + 1
+        j_plus_one: int = j + 1
+        print(C[(i, j)] + ' ' + str(i_plus_one) + ' ' + str(j_plus_one))

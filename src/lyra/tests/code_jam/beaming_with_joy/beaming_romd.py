@@ -101,7 +101,6 @@ def do_parse(input: List[str]) -> List[List[str]]:
         result.append(line.rstrip().split())
     return result
 
-output: List[str] = []
 num_of_test_cases: int = int(input())
 temp: List[str] = input()
 index: int = 0
@@ -109,6 +108,6 @@ for test_case in range(num_of_test_cases):
     lines: int = int(temp[index].rstrip().split()[LINES_PARAM])
     parsed_input: List[List[str]] = do_parse(temp[index:((index + lines) + 1)])
     index: int = ((index + 1) + lines)
-    output.append(((('Case #' + str((test_case + 1))) + ': ') + do_case(parsed_input)))
-for output_line in output:
-    print(output_line)
+    case_number: int = test_case + 1
+    case_result: str = do_case(parsed_input)
+    print('Case #' + str(case_number) + ': ' + case_result)

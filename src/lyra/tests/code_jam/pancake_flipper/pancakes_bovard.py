@@ -37,8 +37,8 @@ for i in range(num_cases):
     flipper_str: str = split_line[1]
     flipper: int = int(flipper_str.strip())
     number: int = solve(cakes, flipper)
+    case_number: int = i + 1
     if (number == (- 1)):
-        result: str = 'IMPOSSIBLE'
+        print('Case #' + str(case_number) + ': ' + 'IMPOSSIBLE')
     else:
-        result: int = number
-    print('Case #' + str(i + 1) + ': ' + str(result))
+        print('Case #' + str(case_number) + ': ' + str(number))

@@ -79,6 +79,8 @@ for t_index in range(t):
         for j in range(n):
             if (l[i][j] != l_beg[i][j]):
                 changes.append((l[i][j], (i + 1), (j + 1)))
-    print(((((('Case #' + str((t_index + 1))) + ': ') + str(s)) + ' ') + str(len(changes))))
+    case_number: int = t_index + 1
+    number_of_changes: int = len(changes)
+    print('Case #' + str(case_number) + ': ' + str(s) + ' ' + str(number_of_changes))
     for r in changes:
         print(str(r[0]) + ' ' + str(r[1]) + ' ' + str(r[2]))
