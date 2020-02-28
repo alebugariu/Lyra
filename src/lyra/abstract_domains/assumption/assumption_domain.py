@@ -11,7 +11,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import List, Dict, Type, Any, Union, Tuple, Set, Optional
 
-from lyra.abstract_domains.lattice import Lattice, BottomMixin
+from lyra.abstract_domains.lattice import Lattice, BottomMixin, EnvironmentMixin
 from lyra.abstract_domains.stack import Stack
 from lyra.abstract_domains.state import State, ProductState
 from lyra.core.expressions import VariableIdentifier, Expression, BinaryComparisonOperation, \
@@ -121,7 +121,7 @@ class InputMixin(State, metaclass=ABCMeta):
         return type(self).inputs.pop(self.pp, list())
 
 
-class AssumptionState(State):
+class AssumptionState(State, EnvironmentMixin):
     """Assumption analysis state. An element of the assumption abstract domain.
 
     Reduced product of a list of constraining states,
@@ -133,6 +133,7 @@ class AssumptionState(State):
     .. automethod:: AssumptionState._assume
     .. automethod:: AssumptionState._substitute
     """
+
     class InputStack(Stack, State):
         """Stack of assumptions on the input data."""
         class InputLattice(BottomMixin):
@@ -893,6 +894,14 @@ class AssumptionState(State):
         """Current stack of assumptions on the input data."""
         return self._stack
 
+    @property
+    def variables(self):
+        """Variables from the current stores of the current states."""
+        all_variables = set()
+        for state in self.states:
+            all_variables = all_variables.union(state.variables)
+        return all_variables
+
     def __repr__(self):
         return "{}".format(self.stack)
 
@@ -1050,7 +1059,25 @@ class AssumptionState(State):
     def forget_variable(self, variable: VariableIdentifier) -> 'State':
         for i, state in enumerate(self.states):
             self.states[i] = state.forget_variable(variable)
-        self.stack.forget_variable(variable)
+        #self.stack.forget_variable(variable)
+        return self
+
+    @copy_docstring(EnvironmentMixin.unify)
+    def unify(self, other: 'AssumptionState') -> 'AssumptionState':
+        for i, (state, other_state) in enumerate(zip(self.states, other.states)):
+            self.states[i] = state.unify(other_state)
+        return self
+
+    @copy_docstring(EnvironmentMixin.add_variable)
+    def add_variable(self, variable: VariableIdentifier) -> 'AssumptionState':
+        for i, state in enumerate(self.states):
+            self.states[i] = state.add_variable(variable)
+        return self
+
+    @copy_docstring(EnvironmentMixin.remove_variable)
+    def remove_variable(self, variable: VariableIdentifier) -> 'AssumptionState':
+        for i, state in enumerate(self.states):
+            self.states[i] = state.remove_variable(variable)
         return self
 
     @copy_docstring(State._output)
