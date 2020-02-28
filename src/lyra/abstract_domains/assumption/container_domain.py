@@ -6,12 +6,12 @@ from lyra.abstract_domains.assumption.assumption_domain import InputMixin
 from lyra.abstract_domains.basis import Basis
 from lyra.abstract_domains.state import State
 from lyra.abstract_domains.lattice import BottomMixin
-from lyra.abstract_domains.numerical.interval_domain import Input, Literal, BinaryOperation
+from lyra.abstract_domains.numerical.interval_domain import Input, Literal, UnaryArithmeticOperation
 
 from lyra.core.expressions import VariableIdentifier, Expression, Subscription, SetDisplay, ListDisplay, \
     BinaryComparisonOperation, Keys, DictDisplay, Values, UnaryBooleanOperation, Slicing, TupleDisplay, \
-    BinaryArithmeticOperation
-from lyra.core.types import LyraType, ListLyraType
+    BinaryArithmeticOperation, LengthIdentifier
+from lyra.core.types import LyraType, ListLyraType, IntegerLyraType
 from lyra.core.utils import copy_docstring
 
 
@@ -32,11 +32,8 @@ class ContainerLattice(BottomMixin):
 
     def __init__(self, keys: Set[LyraType] = None, values: Set[LyraType] = None):
         super().__init__()
-        if keys is not None and values is not None:
-            self._keys = keys
-            self._values = values
-        else:
-            self.top()
+        self._keys = keys if keys is not None else set()
+        self._values = values if values is not None else set()
 
     @property
     def keys(self):
@@ -172,6 +169,22 @@ class ContainerState(Basis, InputMixin):
                     return self
                 if operator is BinaryComparisonOperation.Operator.In:
                     self.store[target] = ContainerLattice(current_state.keys.union({left}), current_state.values)
+                    return self
+            if isinstance(left, Subscription):
+                target = left.target
+                key = left.key
+                if isinstance(target.typ, ListLyraType) and isinstance(key, UnaryArithmeticOperation) and \
+                        key.operator is UnaryArithmeticOperation.Operator.Sub:  # negative index in list
+                            key = BinaryArithmeticOperation(IntegerLyraType, LengthIdentifier(target),
+                                                            BinaryArithmeticOperation.Operator.Add, key)
+                current_state = self.store[target]
+                if operator in (BinaryComparisonOperation.Operator.NotEq, BinaryComparisonOperation.Operator.IsNot):
+                    self.store[target] = ContainerLattice(current_state.keys.union({key}),
+                                                          current_state.values.discard({right}))
+                    return self
+                if operator in (BinaryComparisonOperation.Operator.Eq, BinaryComparisonOperation.Operator.Is):
+                    self.store[target] = ContainerLattice(current_state.keys.union({key}),
+                                                          current_state.values.union({right}))
                     return self
         elif isinstance(condition, UnaryBooleanOperation):  # not
             expression = condition.expression
