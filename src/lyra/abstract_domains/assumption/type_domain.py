@@ -21,7 +21,7 @@ from lyra.core.expressions import VariableIdentifier, Expression, ExpressionVisi
     UnaryArithmeticOperation, BinaryArithmeticOperation, LengthIdentifier, TupleDisplay, \
     SetDisplay, DictDisplay, BinarySequenceOperation, BinaryComparisonOperation, Keys, Values, Items
 from lyra.core.types import LyraType, BooleanLyraType, IntegerLyraType, FloatLyraType, \
-    StringLyraType, ListLyraType, SequenceLyraType
+    StringLyraType, ListLyraType, SequenceLyraType, DictLyraType
 from lyra.core.utils import copy_docstring
 
 
@@ -507,11 +507,18 @@ class TypeState(Store, StateWithSummarization, InputMixin):
 
     @copy_docstring(State._substitute_variable)
     def _substitute_variable(self, left: VariableIdentifier, right: Expression) -> 'TypeState':
+
+        def list_type(variable: VariableIdentifier) -> LyraType:
+            typ = variable.typ
+            while isinstance(typ, ListLyraType):
+                typ = typ.typ
+            return typ
+
         is_list = isinstance(left.typ, ListLyraType)
-        is_boolean_list = is_list and isinstance(left.typ.typ, BooleanLyraType)
-        is_integer_list = is_list and isinstance(left.typ.typ, IntegerLyraType)
-        is_float_list = is_list and isinstance(left.typ.typ, FloatLyraType)
-        is_string_list = is_list and isinstance(left.typ.typ, StringLyraType)
+        is_boolean_list = is_list and isinstance(list_type(left), BooleanLyraType)
+        is_integer_list = is_list and isinstance(list_type(left), IntegerLyraType)
+        is_float_list = is_list and isinstance(list_type(left), FloatLyraType)
+        is_string_list = is_list and isinstance(list_type(left), StringLyraType)
         # record the current value of the substituted variable
         value: TypeLattice = deepcopy(self.store[left])
         if isinstance(left.typ, BooleanLyraType) or is_boolean_list:
