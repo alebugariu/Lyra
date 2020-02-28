@@ -172,6 +172,8 @@ class ContainerState(Basis, InputMixin):
                     return self
             if isinstance(left, Subscription):
                 target = left.target
+                while isinstance(target, (Subscription, Slicing)):
+                    target = target.target
                 key = left.key
                 if isinstance(target.typ, ListLyraType) and isinstance(key, UnaryArithmeticOperation) and \
                         key.operator is UnaryArithmeticOperation.Operator.Sub:  # negative index in list
@@ -200,9 +202,13 @@ class ContainerState(Basis, InputMixin):
     def _substitute(self, left: Expression, right: Expression) -> 'ContainerState':
         if isinstance(right, Subscription):
             target = right.target
-            key = right.key
             while isinstance(target, (Subscription, Slicing)):
                 target = target.target
+            key = right.key
+            if isinstance(target.typ, ListLyraType) and isinstance(key, UnaryArithmeticOperation) and \
+                    key.operator is UnaryArithmeticOperation.Operator.Sub:  # negative index in list
+                key = BinaryArithmeticOperation(IntegerLyraType, LengthIdentifier(target),
+                                                BinaryArithmeticOperation.Operator.Add, key)
             current_state = self.store[target]
             self.store[target] = ContainerLattice(current_state.keys.union({key}), current_state.values)
             return self

@@ -62,6 +62,10 @@ class UserDefinedCallSemantics(BackwardSemantics):
         fname, fcfg, _ = stmt.name, interpreter.cfgs[stmt.name], deepcopy(state)
 
         formal_args = interpreter.fargs[fname]
+        # add formal parameters to the state, if they are not already there
+        for formal in formal_args:
+            if formal not in state.variables:
+                state = state.add_variable(formal).forget_variable(formal)
         # add local function variables to the state
         local_vars = set(fcfg.variables).difference(formal_args)
         for local in local_vars:
