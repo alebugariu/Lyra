@@ -6,11 +6,8 @@ Lyra's internal backward semantics of statements.
 
 :Authors: Caterina Urban
 """
-from typing import Union
-
-from lyra.abstract_domains.lattice import EnvironmentMixin
-from lyra.core.expressions import BinarySequenceOperation, ListDisplay, VariableIdentifier, SetDisplay, LengthIdentifier
-from lyra.core.types import ListLyraType, SetLyraType, SequenceLyraType, ContainerLyraType
+from lyra.core.expressions import BinarySequenceOperation, ListDisplay, SetDisplay
+from lyra.core.types import ListLyraType, SetLyraType
 from lyra.engine.interpreter import Interpreter
 from lyra.semantics.semantics import Semantics, DefaultSemantics
 
@@ -66,9 +63,6 @@ class UserDefinedCallSemantics(BackwardSemantics):
         for formal in formal_args:
             if formal not in state.variables:
                 state = state.add_variable(formal).forget_variable(formal)
-                if isinstance(formal.typ, (SequenceLyraType, ContainerLyraType)):
-                    length = LengthIdentifier(formal)
-                    state = state.add_variable(length).forget_variable(length)
         # add local function variables to the state
         local_vars = set(fcfg.variables).difference(formal_args)
         for local in local_vars:

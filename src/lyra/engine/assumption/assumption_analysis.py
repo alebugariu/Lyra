@@ -9,7 +9,8 @@ from lyra.abstract_domains.assumption.assumption_domain import TypeRangeAssumpti
     TypeAlphabetAssumptionState, TypeRangeAlphabetAssumptionState, TypeQuantityAssumptionState, \
     TypeWordSetAssumptionState, TypeRangeWordSetAssumptionState, \
     TypeRangeAlphabetWordSetAssumptionState, QuantityRangeWordSetAssumptionState, \
-    SignIntervalStringSetProductState, TypeRangeContainerAssumptionState
+    SignIntervalStringSetProductState, TypeSignIntervalStringSetProductState, \
+    TypeQuantityRangeWordSetAssumptionState, TypeRangeContainerAssumptionState
 from lyra.abstract_domains.assumption.container_domain import ContainerState
 from lyra.abstract_domains.assumption.quantity_domain import QuantityState
 from lyra.abstract_domains.assumption.range_domain import RangeState
@@ -21,7 +22,16 @@ from lyra.semantics.backward import DefaultBackwardSemantics
 from lyra.semantics.forward import DefaultForwardSemantics
 
 
-class TypeAnalysis(Runner):
+class ForwardTypeAnalysis(Runner):
+
+    def interpreter(self):
+        return ForwardInterpreter(self.cfgs, self.fargs, DefaultForwardSemantics(), 3)
+
+    def state(self):
+        return TypeState(self.variables)
+
+
+class BackwardTypeAnalysis(Runner):
 
     def interpreter(self):
         return BackwardInterpreter(self.cfgs, self.fargs, DefaultBackwardSemantics(), 3)
@@ -146,3 +156,23 @@ class QuantityRangeWordSetAssumptionAnalysis(Runner):
     def state(self):
         precursory = SignIntervalStringSetProductState(self.variables)
         return QuantityRangeWordSetAssumptionState(self.variables, precursory=precursory)
+
+
+class TypeSignIntervalStringSetProductAnalysis(Runner):
+
+    def interpreter(self):
+        return ForwardInterpreter(self.cfgs, self.fargs, DefaultForwardSemantics(), 3)
+
+    def state(self):
+        return TypeSignIntervalStringSetProductState(self.variables)
+
+
+class TypeQuantityRangeWordSetAssumptionAnalysis(Runner):
+
+    def interpreter(self):
+        forward = ForwardInterpreter(self.cfgs, self.fargs, DefaultForwardSemantics(), 3)
+        return BackwardInterpreter(self.cfgs, self.fargs, DefaultBackwardSemantics(), 3, precursory=forward)
+
+    def state(self):
+        precursory = TypeSignIntervalStringSetProductState(self.variables)
+        return TypeQuantityRangeWordSetAssumptionState(self.variables, precursory=precursory)

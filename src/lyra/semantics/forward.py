@@ -8,9 +8,8 @@ Lyra's internal forward semantics of statements.
 """
 from typing import Union
 
-from lyra.abstract_domains.lattice import EnvironmentMixin
 from lyra.core.expressions import BinarySequenceOperation, ListDisplay, VariableIdentifier, SetDisplay
-from lyra.core.types import ListLyraType, IntegerLyraType, SetLyraType
+from lyra.core.types import ListLyraType, SetLyraType
 from lyra.engine.interpreter import Interpreter
 from lyra.semantics.semantics import Semantics, DefaultSemantics
 
